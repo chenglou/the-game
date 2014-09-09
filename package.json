@@ -1,0 +1,19 @@
+{
+  "name": "the-game",
+  "version": "0.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "node_modules/.bin/webpack --watch -d"
+  },
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "jsx-loader": "^0.11.0",
+    "webpack": "^1.4.0-beta4"
+  },
+  "dependencies": {
+    "react": "^0.11.1"
+  }
+}
