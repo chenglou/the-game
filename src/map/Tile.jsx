@@ -1,5 +1,3 @@
-/** @jsx React.DOM */
-
 var React = require('react');
 
 var asd = require('../../assets/tile.png');
@@ -14,18 +12,32 @@ function calcH(x) {
 }
 
 var Tile = React.createClass({
+  propTypes: {
+    diagLength: React.PropTypes.number.isRequired,
+    pos: React.PropTypes.array.isRequired,
+    config: React.PropTypes.object.isRequired,
+  },
+
   render: function() {
     var props = this.props;
+    var h = calcH(props.diagLength);
+    var w = calcW(props.diagLength);
+    var d = (w - props.diagLength) / 2;
 
     var s = {
       backgroundImage: url(asd),
-      width: calcW(props.diagLength),
-      height: calcH(props.diagLength),
+      width: w,
+      height: h,
+      // TODO:
+      display: 'inline-block',
+      position: 'relative',
+      top: props.pos[1] % 2 === 0 ? 0 : -h / 2,
+      left: -d * props.pos[1],
     };
 
     return (
       <div style={s}>
-        asd
+        {this.props.pos.toString()}
       </div>
     );
   }
