@@ -1,9 +1,17 @@
+var webpack = require('webpack');
+
+var commonsPlugin = new webpack.optimize.CommonsChunkPlugin('common.js');
+
 module.exports = {
-  entry: './index.jsx',
+  entry: {
+    index: './index.jsx',
+    editor: './src/meta/mapEditor.jsx',
+  },
   output: {
     path: './out',
-    filename: 'index.js',
+    filename: '[name].js',
   },
+  plugins: [commonsPlugin],
   module: {
     loaders: [
       {test: /\.jsx$/, loader: 'jsx-loader?harmony'},
@@ -14,3 +22,4 @@ module.exports = {
     extensions: ['', '.js', '.json', '.jsx']
   }
 };
+

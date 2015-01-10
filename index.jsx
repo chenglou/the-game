@@ -1,5 +1,3 @@
-/** @jsx React.DOM */
-
 var React = require('react');
 var Tile = require('./src/map/Tile');
 
@@ -23,30 +21,12 @@ var App = React.createClass({
   render: function() {
     return (
       <div>
-        <Tile diagLength={25} />asd
+        <Tile diagLength={25} pos={[0, 0]} />
+        <Tile diagLength={25} pos={[0, 1]} />
+        <Tile diagLength={25} pos={[0, 2]} />
       </div>
     );
   }
 });
 
-React.renderComponent(<App />, document.querySelector('#container'));
-
-class Person {
-  constructor(firstName, lastName) {
-    this.firstName = firstName;
-    this.lastName = lastName;
-  }
-
-  name() {
-    return this.firstName + ' ' + this.lastName;
-  }
-
-  toString() {
-    return this.name;
-  }
-}
-
-
-var p = new Person('c', 'l');
-
-console.log(p.name());
+React.render(<App />, document.querySelector('#container'));
