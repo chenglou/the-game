@@ -8,7 +8,7 @@ var p = React.PropTypes;
 var Grid = React.createClass({
   propTypes: {
     configs: p.arrayOf(p.array.isRequired).isRequired,
-    tileClick: p.func.isRequired,
+    tileMouseDown: p.func.isRequired,
   },
 
   render: function() {
@@ -25,7 +25,7 @@ var Grid = React.createClass({
             diagLength={25}
             pos={[i, j]}
             config={props.configs[i][j]}
-            onClick={props.tileClick.bind(null, i, j)}
+            onMouseDown={props.tileMouseDown.bind(null, i, j)}
             onMouseEnter={props.tileHover.bind(null, i, j)} />
         );
       }, M.range(w));

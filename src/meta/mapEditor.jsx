@@ -6,6 +6,14 @@ var colorConfig = require('../../colorConfig');
 var out = M.clj_to_js;
 var p = React.PropTypes;
 
+function range(n, val) {
+  var ret = [];
+  for (var i = 0; i < n; i++) {
+    ret.push(val);
+  }
+  return ret;
+}
+
 var LandBox = React.createClass({
   propTypes: {
     color: p.number.isRequired,
@@ -33,27 +41,47 @@ var Editor = React.createClass({
   getInitialState: function() {
     return {
       hover: [0, 0],
-      w: 10,
-      h: 5,
       selectedLand: 0,
-      colors: out(M.map(() => M.repeat(10, 0), M.range(5))),
+      colors: range(5, 0).map(() => range(10, 0)),
       clicking: false,
     };
   },
 
-  handleChange: function(state, e) {
-    var obj = {};
-    obj[state] = e.target.value;
-    this.setState(obj);
+  handleRangeChange: function(state, e) {
+    var val = parseInt(e.target.value);
+    if (val < 1 || val > 50) {
+      return;
+    }
+    var colors = this.state.colors;
+    var w = colors[0].length;
+    var h = colors.length;
+
+    if (state === 'w') {
+      if (val > w) {
+        colors = colors.map((row) => row.concat(range(val - w, 0)));
+      } else {
+        colors = colors.map((row) => row.slice(0, val));
+      }
+    } else {
+      if (val > h) {
+        colors = colors.concat(range(val - h, 0).map(() => range(w, 0)));
+      } else {
+        colors = colors.slice(0, val);
+      }
+    }
+
+    this.setState({
+      colors: colors,
+    });
   },
 
-  handleLandClick: function(selectedNum) {
+  handleTileOptionClick: function(selectedNum) {
     this.setState({
       selectedLand: selectedNum,
     });
   },
 
-  handleTileClick: function(i, j) {
+  handleTileMouseDown: function(i, j) {
     var colors = this.state.colors;
 
     colors[i][j] = this.state.selectedLand;
@@ -98,16 +126,6 @@ var Editor = React.createClass({
       });
     });
 
-    // var configs = M.map((colorRow) => {
-    //   return M.map((colorCell) => {
-    //     return {
-    //       villageType: 1,
-    //       color: colorCell,
-    //     };
-    //   }, colorRow);
-    // }, state.colors);
-    // configs = out(configs);
-
     var configBox = {
       border: '1px solid black',
       width: 1000,
@@ -117,22 +135,28 @@ var Editor = React.createClass({
     var gridWrapper = {
       border: '1px solid black',
       width: 10000,
+      paddingBottom: 25,
     };
+
+    var w = state.colors[0].length;
+    var h = state.colors.length;
 
     return (
       <div>
         <div style={configBox}>
           <input
             type="range"
-            value={state.w}
-            onChange={this.handleChange.bind(null, 'w')} />
-          <span>{state.w}</span>
+            value={w}
+            max={50}
+            onChange={this.handleRangeChange.bind(null, 'w')} />
+          <span>{w}</span>
           <input
             type="range"
-            value={state.h}
-            onChange={this.handleChange.bind(null, 'h')} />
-          <span>{state.h}</span>
-          <div>Tile count: {state.w * state.h}</div>
+            value={h}
+            max={50}
+            onChange={this.handleRangeChange.bind(null, 'h')} />
+          <span>{h}</span>
+          <div>Tile count: {w * h}</div>
           <div>
             {state.hover[0]}, {state.hover[1]}
           </div>
@@ -141,17 +165,17 @@ var Editor = React.createClass({
           <div>
             <LandBox
               color={0}
-              onClick={this.handleLandClick.bind(null, 0)}
+              onClick={this.handleTileOptionClick.bind(null, 0)}
               selected={state.selectedLand === 0}>
             </LandBox>
             <LandBox
               color={1}
-              onClick={this.handleLandClick.bind(null, 1)}
+              onClick={this.handleTileOptionClick.bind(null, 1)}
               selected={state.selectedLand === 1}>
             </LandBox>
             <LandBox
               color={2}
-              onClick={this.handleLandClick.bind(null, 2)}
+              onClick={this.handleTileOptionClick.bind(null, 2)}
               selected={state.selectedLand === 2}>
             </LandBox>
           </div>
@@ -163,7 +187,7 @@ var Editor = React.createClass({
           onMouseUp={this.handleMouseUp} >
           <Grid
             configs={configs}
-            tileClick={this.handleTileClick}
+            tileMouseDown={this.handleTileMouseDown}
             tileHover={this.handleTileHover} />
         </div>
 

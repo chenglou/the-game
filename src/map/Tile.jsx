@@ -51,7 +51,6 @@ var Tile = React.createClass({
     return (
       <div {...props} style={s}>
         {props.pos[0]}, {props.pos[1]}
-        {props.config.color}
       </div>
     );
   }
