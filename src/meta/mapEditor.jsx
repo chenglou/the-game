@@ -14,6 +14,32 @@ function range(n, val) {
   return ret;
 }
 
+function shallowClone(arr) {
+  return arr.map((a) => a);
+}
+
+// clone the 2d array structure
+function shallowCloneMap(map) {
+  return shallowClone(map.map((row) => shallowClone(row)));
+}
+
+function surroundWithSea(map) {
+  var newMap = shallowCloneMap(map);
+  // verticals
+  for (var i = 0; i < newMap.length; i++) {
+    var row = newMap[i];
+    row[0] = 1;
+    row[row.length - 1] = 1;
+  }
+  // horizontals
+  for (var i = 0; i < newMap[0].length; i++) {
+    newMap[0][i] = 1;
+    newMap[newMap.length - 1][i] = 1;
+  }
+
+  return newMap;
+}
+
 var LandBox = React.createClass({
   propTypes: {
     color: p.number.isRequired,
@@ -39,10 +65,11 @@ var LandBox = React.createClass({
 
 var Editor = React.createClass({
   getInitialState: function() {
+    var map = range(5, 0).map(() => range(10, 0));
     return {
       hover: [0, 0],
       selectedLand: 0,
-      colors: range(5, 0).map(() => range(10, 0)),
+      colors: surroundWithSea(map),
       clicking: false,
     };
   },
@@ -71,7 +98,7 @@ var Editor = React.createClass({
     }
 
     this.setState({
-      colors: colors,
+      colors: surroundWithSea(colors),
     });
   },
 
