@@ -3,15 +3,9 @@ var React = require('react');
 var Tile = require('./src/map/Tile');
 var Grid = require('./src/map/Grid');
 
-var out = M.clj_to_js;
+var map1 = require('./src/map/data/map1');
 
-var map = [
-  [0, 1, 1, 0, 1],
-  [0, 1, 0, 0, 0],
-  [0, 1, 0, 0, 0],
-  [0, 1, 0, 0, 0],
-  [0, 1, 1, 0, 1],
-];
+var out = M.clj_to_js;
 
 function calcW(x) {
   return x * 2;
@@ -23,20 +17,20 @@ function calcH(x) {
 
 var App = React.createClass({
   render: function() {
-    var configs = M.map((i) => {
-      return M.map((j) => {
-        return {
-          villageType: map[i][j],
-          color: map[i][j],
-        };
-      }, M.range(map[0].length));
-    }, M.range(map.length));
-
-    configs = out(configs);
+    var gridWrapper = {
+      border: '1px solid black',
+      width: 10000,
+      paddingBottom: 25,
+    };
 
     return (
       <div>
-        <Grid configs={configs} />
+        <div style={gridWrapper}>
+          <Grid
+            configs={map1}
+            tileMouseDown={function() {}}
+            tileHover={function() {}} />
+        </div>
       </div>
     );
   }

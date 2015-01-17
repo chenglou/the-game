@@ -9,6 +9,7 @@ var Grid = React.createClass({
   propTypes: {
     configs: p.arrayOf(p.array.isRequired).isRequired,
     tileMouseDown: p.func.isRequired,
+    tileHover: p.func.isRequired,
   },
 
   render: function() {
