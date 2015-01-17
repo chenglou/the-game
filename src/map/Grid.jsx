@@ -3,10 +3,12 @@ var Tile = require('./Tile');
 var M = require('mori');
 
 var out = M.clj_to_js;
+var p = React.PropTypes;
 
 var Grid = React.createClass({
   propTypes: {
-    configs: React.PropTypes.arrayOf(React.PropTypes.array.isRequired).isRequired,
+    configs: p.arrayOf(p.array.isRequired).isRequired,
+    tileClick: p.func.isRequired,
   },
 
   render: function() {
@@ -22,15 +24,22 @@ var Grid = React.createClass({
             key={i + '|' + j}
             diagLength={25}
             pos={[i, j]}
-            config={props.configs[i][j]} />
+            config={props.configs[i][j]}
+            onClick={props.tileClick.bind(null, i, j)}
+            onMouseEnter={props.tileHover.bind(null, i, j)} />
         );
       }, M.range(w));
 
       return <div key={i}>{out(cells)}</div>;
     }, M.range(h));
 
+    var s = {
+      top: 25,
+      position: 'relative',
+      WebkitUserSelect: 'none',
+    };
     return (
-      <div>
+      <div style={s}>
         {out(tiles)}
       </div>
     );

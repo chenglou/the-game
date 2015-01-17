@@ -1,3 +1,13 @@
+var _ = require('lodash');
+
+function shallowCloneMap(m) {
+  return m.map(function(tiles) {
+    return tiles.map(function(t) {
+      return t;
+    });
+  });
+}
+
 function hasAtLeast3InSurrounding(map, tile) {
   var x = tile[0];
   var y = tile[1];
