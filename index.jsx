@@ -1,7 +1,9 @@
 var M = require('mori');
 var React = require('react');
-var Tile = require('./src/map/Tile');
+var Land = require('./src/map/Land');
 var Grid = require('./src/map/Grid');
+var Hovel = require('./src/unit/Hovel');
+var unitConfig = require('./src/unit/unitConfig');
 
 var map1 = require('./src/map/data/map1');
 
@@ -15,6 +17,21 @@ function calcH(x) {
   return Math.sqrt(x * x + (x / 2) * (x / 2)) * 2;
 }
 
+function range(n, val) {
+  var ret = [];
+  for (var i = 0; i < n; i++) {
+    ret.push(val);
+  }
+  return ret;
+}
+
+var unitConfigs = range(map1.length, 0).map(() => {
+  return range(map1[0].length, {
+    unit: unitConfig[0],
+    component: Hovel,
+  });
+});
+
 var App = React.createClass({
   render: function() {
     var gridWrapper = {
@@ -27,7 +44,8 @@ var App = React.createClass({
       <div>
         <div style={gridWrapper}>
           <Grid
-            configs={map1}
+            tileConfigs={map1}
+            unitConfigs={unitConfigs}
             tileMouseDown={function() {}}
             tileHover={function() {}} />
         </div>

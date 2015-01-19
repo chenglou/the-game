@@ -1,13 +1,20 @@
 var React = require('react');
-var Tile = require('./Tile');
+var Land = require('./Land');
+var Tile = require('../Tile');
 var M = require('mori');
+var assign = require('object-assign');
 
 var out = M.clj_to_js;
 var p = React.PropTypes;
 
+function calcH(x) {
+  return x * 2;
+}
+
 var Grid = React.createClass({
   propTypes: {
-    configs: p.arrayOf(p.array.isRequired).isRequired,
+    tileConfigs: p.arrayOf(p.array.isRequired).isRequired,
+    unitConfigs: p.arrayOf(p.array.isRequired),
     tileMouseDown: p.func.isRequired,
     tileHover: p.func.isRequired,
   },
@@ -15,33 +22,74 @@ var Grid = React.createClass({
   render: function() {
     var props = this.props;
 
-    var h = props.configs.length;
-    var w = props.configs[0].length;
+    var h = props.tileConfigs.length;
+    var w = props.tileConfigs[0].length;
 
-    var tiles = M.map((i) => {
+    var rowS = {
+      width: 9999,
+    };
+
+    var lands = M.map((i) => {
       var cells = M.map((j) => {
         return (
           <Tile
-            key={i + '|' + j}
+            key={j}
             diagLength={25}
             pos={[i, j]}
-            config={props.configs[i][j]}
-            onMouseDown={props.tileMouseDown.bind(null, i, j)}
-            onMouseEnter={props.tileHover.bind(null, i, j)} />
+            config={props.tileConfigs[i][j]}
+            >
+            <Land
+              pos={[i, j]}
+              config={props.tileConfigs[i][j]}
+              onMouseDown={props.tileMouseDown.bind(null, i, j)}
+              onMouseEnter={props.tileHover.bind(null, i, j)} />
+          </Tile>
         );
       }, M.range(w));
 
-      return <div key={i}>{out(cells)}</div>;
+      return <div key={i} style={rowS}>{out(cells)}</div>;
     }, M.range(h));
+
+    var maybeUnits = null;
+    if (props.unitConfigs) {
+      maybeUnits = props.unitConfigs.map((row, i) => {
+        var cells = row.map((cell, j) => {
+          var Unit = cell.component;
+          return (
+            <Tile
+              key={j}
+              diagLength={25}
+              pos={[i, j]}
+              config={props.unitConfigs[i][j]}
+              >
+              <Unit />
+            </Tile>
+          );
+        });
+
+        return <div key={i} style={rowS}>{cells}</div>;
+      });
+    }
 
     var s = {
       top: 25,
-      position: 'relative',
       WebkitUserSelect: 'none',
+      height: calcH(25) * props.tileConfigs.length,
+    };
+    var tilesS = {
+      position: 'absolute',
+    };
+    var unitsS = {
+      position: 'absolute',
     };
     return (
       <div style={s}>
-        {out(tiles)}
+        <div style={tilesS}>
+          {out(lands)}
+        </div>
+        <div style={unitsS}>
+          {maybeUnits}
+        </div>
       </div>
     );
   }
