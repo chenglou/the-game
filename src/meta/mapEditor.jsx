@@ -89,13 +89,13 @@ var Editor = React.createClass({
 
     if (state === 'w') {
       if (val > w) {
-        colors = colors.map((row) => row.concat(range(val - w, 0)));
+        colors = colors.map((row) => row.concat(range(val - w, 1)));
       } else {
         colors = colors.map((row) => row.slice(0, val));
       }
     } else {
       if (val > h) {
-        colors = colors.concat(range(val - h, 0).map(() => range(w, 0)));
+        colors = colors.concat(range(val - h, 0).map(() => range(w, 1)));
       } else {
         colors = colors.slice(0, val);
       }
