@@ -1,6 +1,6 @@
 var React = require('react');
 var landImg = require('./land.png');
-var url = require('../../utils/imgUrl');
+var url = require('../utils/imgUrl');
 var assign = require('object-assign');
 
 var p = React.PropTypes;

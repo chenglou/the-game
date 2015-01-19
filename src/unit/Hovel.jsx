@@ -1,5 +1,5 @@
 var React = require('react');
-var url = require('../../utils/imgUrl');
+var url = require('../utils/imgUrl');
 var hovelImg = require('./hovel.png');
 var assign = require('object-assign');
 

@@ -6,6 +6,10 @@ var colorConfig = require('../../colorConfig');
 var out = M.clj_to_js;
 var p = React.PropTypes;
 
+function calcH(x) {
+  return x * 2;
+}
+
 function range(n, val) {
   var ret = [];
   for (var i = 0; i < n; i++) {
@@ -144,6 +148,9 @@ var Editor = React.createClass({
   render: function() {
     var state = this.state;
 
+    var w = state.colors[0].length;
+    var h = state.colors.length;
+
     var configs = state.colors.map((row) => {
       return row.map((cell) => {
         return {
@@ -162,11 +169,8 @@ var Editor = React.createClass({
     var gridWrapper = {
       border: '1px solid black',
       width: 10000,
-      paddingBottom: 25,
+      height: calcH(25) * h + 25,
     };
-
-    var w = state.colors[0].length;
-    var h = state.colors.length;
 
     return (
       <div>
@@ -208,14 +212,17 @@ var Editor = React.createClass({
           </div>
         </div>
 
-        <div
-          style={gridWrapper}
-          onMouseDown={this.handleMouseDown}
-          onMouseUp={this.handleMouseUp} >
-          <Grid
-            configs={configs}
-            tileMouseDown={this.handleTileMouseDown}
-            tileHover={this.handleTileHover} />
+        <div style={{position: 'relative'}}>
+          <div
+            className="gridWrapper"
+            style={gridWrapper}
+            onMouseDown={this.handleMouseDown}
+            onMouseUp={this.handleMouseUp} >
+            <Grid
+              tileConfigs={configs}
+              tileMouseDown={this.handleTileMouseDown}
+              tileHover={this.handleTileHover} />
+          </div>
         </div>
 
         <textarea
