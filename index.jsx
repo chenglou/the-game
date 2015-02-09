@@ -30,13 +30,12 @@ var App = React.createClass({
       border: '1px solid black',
       width: 10000,
     };
-
+            // unitConfigs={unitConfigs}
     return (
       <div>
         <div style={gridWrapper}>
           <Grid
             tileConfigs={map1}
-            unitConfigs={unitConfigs}
             tileMouseDown={function() {}}
             tileHover={function() {}} />
         </div>
