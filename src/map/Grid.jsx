@@ -1,5 +1,6 @@
 var React = require('react');
 var Land = require('./Land');
+var positioner = require('./positioner');
 var Tile = require('../Tile');
 var M = require('mori');
 var assign = require('object-assign');
@@ -68,7 +69,6 @@ var Grid = React.createClass({
     }
 
     var s = {
-      top: 25,
       WebkitUserSelect: 'none',
       height: positioner.calcH(25) * props.tileConfigs.length,
     };

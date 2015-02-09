@@ -29,7 +29,6 @@ var App = React.createClass({
     var gridWrapper = {
       border: '1px solid black',
       width: 10000,
-      paddingBottom: 25,
     };
 
     return (

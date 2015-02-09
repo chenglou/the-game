@@ -17,22 +17,16 @@ var Tile = React.createClass({
   render: function() {
     var props = this.props;
     var pos = props.pos;
-    var h = positioner.calcH(props.diagLength);
-    var w = positioner.calcW(props.diagLength);
-    var d = (w - props.diagLength) / 2;
 
     var s = {
-      height: h,
-      width: w,
-      // TODO:
-      display: 'inline-block',
-      left: -d * pos[1] + pos[1] * w,
-      top: (pos[1] % 2 === 0 ? 0 : -h / 2) + pos[0] * h,
+      height: positioner.calcH(),
+      width: positioner.calcW(),
+      left: positioner.calcLeft(pos[1], pos[0]),
+      top: positioner.calcTop(pos[0]),
     };
-
-    if (props.config.color != null) {
-      s.backgroundColor = colorConfig[props.config.color];
-    }
+    // if (props.config.color != null) {
+    //   s.backgroundColor = colorConfig[props.config.color];
+    // }
 
     return (
       <div {...props} style={s}>

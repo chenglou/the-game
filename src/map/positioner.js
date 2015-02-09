@@ -1,17 +1,25 @@
-function calcH(diag) {
-  return diag * 2;
+var tileH = 89;
+var tileW = 65;
+
+// magic number
+var tileHOffSet = 50;
+
+function calcH() {
+  return tileH;
 }
 
-function calcW(diag) {
-  return Math.sqrt(diag * diag + (diag/2) * (diag/2)) * 2;
+function calcW() {
+  return tileW;
 }
 
-function calcLeft(diag, x, y) {
-
+// relative to 0, 0
+function calcLeft(x, y) {
+  return (y % 2 === 0 ? 0 : tileW/2) + x * tileW;
 }
 
-function calcTop(diag, x, y) {
-
+// relative to 0, 0
+function calcTop(y) {
+  return y * tileHOffSet;
 }
 
 module.exports = {
