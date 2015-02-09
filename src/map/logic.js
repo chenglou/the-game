@@ -8,6 +8,7 @@ function shallowCloneMap(m) {
   });
 }
 
+// TODO: this logic is no longer good bc we flipped the tiles
 function hasAtLeast3InSurrounding(map, tile) {
   var x = tile[0];
   var y = tile[1];

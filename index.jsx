@@ -9,14 +9,6 @@ var map1 = require('./src/map/data/map1');
 
 var out = M.clj_to_js;
 
-function calcW(x) {
-  return x * 2;
-}
-
-function calcH(x) {
-  return Math.sqrt(x * x + (x / 2) * (x / 2)) * 2;
-}
-
 function range(n, val) {
   var ret = [];
   for (var i = 0; i < n; i++) {

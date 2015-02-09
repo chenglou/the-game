@@ -1,13 +1,6 @@
 var React = require('react');
 var colorConfig = require('../colorConfig');
-
-function calcW(x) {
-  return Math.sqrt(x * x + (x/2) * (x/2)) * 2;
-}
-
-function calcH(x) {
-  return x * 2;
-}
+var positioner = require('./map/positioner');
 
 var p = React.PropTypes;
 
@@ -24,8 +17,8 @@ var Tile = React.createClass({
   render: function() {
     var props = this.props;
     var pos = props.pos;
-    var h = calcH(props.diagLength);
-    var w = calcW(props.diagLength);
+    var h = positioner.calcH(props.diagLength);
+    var w = positioner.calcW(props.diagLength);
     var d = (w - props.diagLength) / 2;
 
     var s = {
@@ -50,5 +43,3 @@ var Tile = React.createClass({
 });
 
 module.exports = Tile;
-
-console.log(calcW(25));

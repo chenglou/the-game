@@ -7,10 +7,6 @@ var assign = require('object-assign');
 var out = M.clj_to_js;
 var p = React.PropTypes;
 
-function calcH(x) {
-  return x * 2;
-}
-
 var Grid = React.createClass({
   propTypes: {
     tileConfigs: p.arrayOf(p.array.isRequired).isRequired,
@@ -74,7 +70,7 @@ var Grid = React.createClass({
     var s = {
       top: 25,
       WebkitUserSelect: 'none',
-      height: calcH(25) * props.tileConfigs.length,
+      height: positioner.calcH(25) * props.tileConfigs.length,
     };
     var tilesS = {
       position: 'absolute',

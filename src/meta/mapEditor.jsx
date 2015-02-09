@@ -1,14 +1,11 @@
 var M = require('mori');
 var Grid = require('../map/Grid');
+var positioner = require('../map/positioner');
 var React = require('react');
 var colorConfig = require('../../colorConfig');
 
 var out = M.clj_to_js;
 var p = React.PropTypes;
-
-function calcH(x) {
-  return x * 2;
-}
 
 function range(n, val) {
   var ret = [];
@@ -169,7 +166,7 @@ var Editor = React.createClass({
     var gridWrapper = {
       border: '1px solid black',
       width: 10000,
-      height: calcH(25) * h + 25,
+      height: positioner.calcH(25) * h + 25,
     };
 
     return (
