@@ -51,15 +51,19 @@ var Grid = React.createClass({
     if (props.unitConfigs) {
       maybeUnits = props.unitConfigs.map((row, i) => {
         var cells = row.map((cell, j) => {
+          if (!cell) {
+            return null;
+          }
           var Unit = cell.component;
           return (
             <Tile
               key={j}
               diagLength={25}
               pos={[i, j]}
-              config={props.unitConfigs[i][j]}
-              >
-              <Unit />
+              config={props.unitConfigs[i][j]}>
+              <Unit
+                onMouseDown={props.tileMouseDown.bind(null, i, j)}
+                onMouseEnter={props.tileHover.bind(null, i, j)}/>
             </Tile>
           );
         });

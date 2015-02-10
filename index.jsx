@@ -18,25 +18,36 @@ function range(n, val) {
 }
 
 var unitConfigs = range(map1.length, 0).map(() => {
-  return range(map1[0].length, {
-    unit: unitConfig[0],
-    component: Hovel,
+  return range(map1[0].length, 1).map(function() {
+    if (Math.random() < 0.9) {
+      return null;
+    }
+    return {
+      unit: unitConfig[0],
+      component: Hovel,
+    };
   });
 });
 
 var App = React.createClass({
+  handleTileMouseDown: function(i, j) {
+    if (unitConfigs[i][j]) {
+      console.log('has unit here');
+    }
+  },
+
   render: function() {
     var gridWrapper = {
       border: '1px solid black',
       width: 10000,
     };
-            // unitConfigs={unitConfigs}
     return (
       <div>
         <div style={gridWrapper}>
           <Grid
             tileConfigs={map1}
-            tileMouseDown={function() {}}
+            unitConfigs={unitConfigs}
+            tileMouseDown={this.handleTileMouseDown}
             tileHover={function() {}} />
         </div>
       </div>

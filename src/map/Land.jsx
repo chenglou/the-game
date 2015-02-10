@@ -12,7 +12,7 @@ var Land = React.createClass({
   propTypes: {
     pos: p.array.isRequired,
     config: p.shape({
-      villageType: p.number,
+      landType: p.number,
       color: p.number,
     }).isRequired,
   },

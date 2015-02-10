@@ -151,7 +151,7 @@ var Editor = React.createClass({
     var configs = state.colors.map((row) => {
       return row.map((cell) => {
         return {
-          villageType: 1,
+          landType: 1,
           color: cell,
         };
       });

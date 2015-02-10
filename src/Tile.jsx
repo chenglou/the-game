@@ -9,7 +9,7 @@ var Tile = React.createClass({
     diagLength: p.number.isRequired,
     pos: p.array.isRequired,
     config: p.shape({
-      villageType: p.number,
+      landType: p.number,
       color: p.number,
     }).isRequired,
   },
