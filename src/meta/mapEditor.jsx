@@ -4,41 +4,10 @@ var positioner = require('../map/positioner');
 var React = require('react');
 var colorConfig = require('../../colorConfig');
 var url = require('../utils/imgUrl');
+var coexistances = require('../coexistances');
 
 var assetDims = require('../assetDims');
 var everyUnit = require('../everyUnit');
-
-var Fort = require('../useful/Fort.png');
-var Grass = require('../useful/Grass.png');
-var Hovel = require('../useful/Hovel.png');
-var Infantry = require('../useful/Infantry.png');
-var Knight = require('../useful/Knight.png');
-var Meadow = require('../useful/Meadow.png');
-var Pesant = require('../useful/Pesant.png');
-var Road = require('../useful/Road.png');
-var Sea = require('../useful/Sea.png');
-var Soldier = require('../useful/Soldier.png');
-var Tombstone = require('../useful/Tombstone.png');
-var Town = require('../useful/Town.png');
-var Tree = require('../useful/Tree.png');
-var Watchtower = require('../useful/Watchtower.png');
-
-var units = {
-  Fort: Fort,
-  Grass: Grass,
-  Hovel: Hovel,
-  Infantry: Infantry,
-  Knight: Knight,
-  Meadow: Meadow,
-  Pesant: Pesant,
-  Road: Road,
-  Sea: Sea,
-  Soldier: Soldier,
-  Tombstone: Tombstone,
-  Town: Town,
-  Tree: Tree,
-  Watchtower: Watchtower,
-};
 
 var out = M.clj_to_js;
 var p = React.PropTypes;
@@ -60,18 +29,30 @@ function shallowCloneMap(map) {
   return shallowClone(map.map((row) => shallowClone(row)));
 }
 
+function genConfig() {
+
+}
+
 function surroundWithSea(map) {
   var newMap = shallowCloneMap(map);
   // verticals
   for (var i = 0; i < newMap.length; i++) {
     var row = newMap[i];
-    row[0] = 1;
-    row[row.length - 1] = 1;
+    row[0] = {
+      Sea: {},
+    };
+    row[row.length - 1] = {
+      Sea: {},
+    };
   }
   // horizontals
   for (var i = 0; i < newMap[0].length; i++) {
-    newMap[0][i] = 1;
-    newMap[newMap.length - 1][i] = 1;
+    newMap[0][i] = {
+      Sea: {},
+    };
+    newMap[newMap.length - 1][i] = {
+      Sea: {},
+    };
   }
 
   return newMap;
@@ -109,7 +90,7 @@ var LandBox = React.createClass({
 
     return (
       <div {...props} style={s}>
-        <img src={'./out/' + units[unit]} style={imgS} />
+        <img src={'./out/' + everyUnit.img[unit]} style={imgS} />
         <div style={labelS}>
           {unit}
         </div>
@@ -120,11 +101,14 @@ var LandBox = React.createClass({
 
 var Editor = React.createClass({
   getInitialState: function() {
-    var map = range(5, 0).map(() => range(10, 0));
+    var map = range(5, 0).map(() => range(10, {
+      Grass: {},
+    }));
+
     return {
       hover: [0, 0],
-      selectedLand: 'Grass',
-      colors: surroundWithSea(map),
+      selectedUnit: 'Grass',
+      tiles: surroundWithSea(map),
       clicking: false,
     };
   },
@@ -134,53 +118,59 @@ var Editor = React.createClass({
     if (val < 1 || val > 50) {
       return;
     }
-    var colors = this.state.colors;
-    var w = colors[0].length;
-    var h = colors.length;
+    var tiles = this.state.tiles;
+    var w = tiles[0].length;
+    var h = tiles.length;
 
     if (state === 'w') {
       if (val > w) {
-        colors = colors.map((row) => row.concat(range(val - w, 1)));
+        tiles = tiles.map((row) => row.concat(range(val - w, {
+          Grass: {},
+        })));
       } else {
-        colors = colors.map((row) => row.slice(0, val));
+        tiles = tiles.map((row) => row.slice(0, val));
       }
     } else {
       if (val > h) {
-        colors = colors.concat(range(val - h, 0).map(() => range(w, 1)));
+        tiles = tiles.concat(range(val - h, 0).map(() => range(w, {
+          Grass: {},
+        })));
       } else {
-        colors = colors.slice(0, val);
+        tiles = tiles.slice(0, val);
       }
     }
 
     this.setState({
-      colors: surroundWithSea(colors),
+      tiles: surroundWithSea(tiles),
     });
   },
 
   handleTileOptionClick: function(unit) {
     this.setState({
-      selectedLand: unit,
+      selectedUnit: unit,
     });
   },
 
   handleTileMouseDown: function(i, j) {
-    var colors = this.state.colors;
+    var tiles = this.state.tiles;
 
-    colors[i][j] = this.state.selectedLand;
+    tiles[i][j] = {}
+    tiles[i][j][this.state.selectedUnit] = {};
     this.setState({
-      colors: colors,
+      tiles: tiles,
     });
   },
 
   handleTileHover: function(i, j) {
-    var colors = this.state.colors;
+    var tiles = this.state.tiles;
     if (this.state.clicking) {
-      colors[i][j] = this.state.selectedLand;
+      tiles[i][j] = {}
+      tiles[i][j][this.state.selectedUnit] = {};
     }
 
     this.setState({
       hover: [i, j],
-      colors: colors,
+      tiles: tiles,
     });
   },
 
@@ -199,17 +189,17 @@ var Editor = React.createClass({
   render: function() {
     var state = this.state;
 
-    var w = state.colors[0].length;
-    var h = state.colors.length;
+    var w = state.tiles[0].length;
+    var h = state.tiles.length;
 
-    var configs = state.colors.map((row) => {
-      return row.map((cell) => {
-        return {
-          landType: 1,
-          color: cell,
-        };
-      });
-    });
+    // var configs = state.tiles.map((row) => {
+    //   return row.map((cell) => {
+    //     return {
+    //       landType: 1,
+    //       color: cell,
+    //     };
+    //   });
+    // });
 
     var configBox = {
       border: '1px solid black',
@@ -218,9 +208,7 @@ var Editor = React.createClass({
     };
 
     var gridWrapper = {
-      border: '1px solid black',
-      width: 10000,
-      height: positioner.calcH(25) * h + 25,
+      height: positioner.calcTop(h + 1),
     };
 
     var tilesBoxS = {
@@ -249,12 +237,12 @@ var Editor = React.createClass({
 
           Lands:
           <div style={tilesBoxS}>
-            {everyUnit.map(function(unit) {
+            {everyUnit.name.map(function(unit) {
               return (
                 <LandBox
                   unit={unit}
                   onClick={this.handleTileOptionClick.bind(null, unit)}
-                  selected={state.selectedLand === unit} />
+                  selected={state.selectedUnit === unit} />
               );
             }, this)}
           </div>
@@ -267,14 +255,14 @@ var Editor = React.createClass({
             onMouseDown={this.handleMouseDown}
             onMouseUp={this.handleMouseUp} >
             <Grid
-              tileConfigs={configs}
+              tileConfigs={state.tiles}
               tileMouseDown={this.handleTileMouseDown}
               tileHover={this.handleTileHover} />
           </div>
         </div>
 
         <textarea
-          value={JSON.stringify(configs)}
+          value={JSON.stringify(state.tiles)}
           readOnly
           cols={60}
           rows={20} />

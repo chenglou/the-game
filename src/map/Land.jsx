@@ -1,10 +1,15 @@
 var React = require('react');
-var landImg = require('../useful/Grass.png');
-var lavaImg = require('../useful/Road.png');
-var waterImg = require('../useful/Sea.png');
+var Grass = require('../useful/Grass.png');
+var Road = require('../useful/Road.png');
+var Sea = require('../useful/Sea.png');
 var url = require('../utils/imgUrl');
-var colorConfig = require('../../colorConfig');
 var assign = require('object-assign');
+
+var units = {
+  Grass: Grass,
+  Road: Road,
+  Sea: Sea,
+};
 
 var p = React.PropTypes;
 
@@ -12,26 +17,20 @@ var Land = React.createClass({
   propTypes: {
     pos: p.array.isRequired,
     config: p.shape({
-      landType: p.number,
-      color: p.number,
+      Sea: p.object,
+      Grass: p.object,
+      Road: p.object,
     }).isRequired,
   },
 
   render: function() {
     var props = this.props;
-    var color = props.config.color;
-
-    var img;
-    if (color === 0) {
-      img = lavaImg;
-    } else if (color === 1) {
-      img = waterImg;
-    } else {
-      img = landImg;
-    }
+    var unit = props.config.Sea ? 'Sea'
+      : props.config.Road ? 'Road'
+      : props.config.Grass ? 'Grass' : 'no unit';
 
     var s = {
-      backgroundImage: url(img),
+      backgroundImage: url(units[unit]),
       backgroundRepeat: 'no-repeat',
       display: 'inline-block',
       width: '100%',

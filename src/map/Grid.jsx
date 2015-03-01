@@ -4,9 +4,22 @@ var positioner = require('./positioner');
 var Tile = require('../Tile');
 var M = require('mori');
 var assign = require('object-assign');
+var everyUnit = require('../everyUnit');
 
 var out = M.clj_to_js;
 var p = React.PropTypes;
+
+function mapObj(obj, f) {
+  var res = [];
+  for (var key in obj) {
+    if (!obj.hasOwnProperty(key)) {
+      continue;
+    }
+    res.push(f(obj[key], key));
+  }
+
+  return res;
+}
 
 var Grid = React.createClass({
   propTypes: {
@@ -28,18 +41,25 @@ var Grid = React.createClass({
 
     var lands = M.map((i) => {
       var cells = M.map((j) => {
+            // <Land
+            //   pos={[i, j]}
+            //   config={props.tileConfigs[i][j]}
+            //   onMouseDown={props.tileMouseDown.bind(null, i, j)}
+            //   onMouseEnter={props.tileHover.bind(null, i, j)} />
+        var unitNames = Object.keys(props.tileConfigs[i][j]);
         return (
-          <Tile
-            key={j}
-            diagLength={25}
-            pos={[i, j]}
-            config={props.tileConfigs[i][j]}
-            >
-            <Land
-              pos={[i, j]}
-              config={props.tileConfigs[i][j]}
-              onMouseDown={props.tileMouseDown.bind(null, i, j)}
-              onMouseEnter={props.tileHover.bind(null, i, j)} />
+          <Tile key={j} diagLength={25} pos={[i, j]}>
+            {i}, {j}
+
+            {unitNames.map(function(unitName) {
+              var Unit = everyUnit.comp[unitName];
+              return (
+                <Unit
+                  onMouseDown={props.tileMouseDown.bind(null, i, j)}
+                  onMouseEnter={props.tileHover.bind(null, i, j)}>
+                </Unit>
+              );
+            })}
           </Tile>
         );
       }, M.range(w));
@@ -55,6 +75,7 @@ var Grid = React.createClass({
             return null;
           }
           var Unit = cell.component;
+          // Unit = tileConfigs[i][j]
           return (
             <Tile
               key={j}

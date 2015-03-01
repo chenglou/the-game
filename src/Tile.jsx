@@ -8,10 +8,6 @@ var Tile = React.createClass({
   propTypes: {
     diagLength: p.number.isRequired,
     pos: p.array.isRequired,
-    config: p.shape({
-      landType: p.number,
-      color: p.number,
-    }).isRequired,
   },
 
   render: function() {
@@ -24,9 +20,6 @@ var Tile = React.createClass({
       left: positioner.calcLeft(pos[1], pos[0]),
       top: positioner.calcTop(pos[0]),
     };
-    // if (props.config.color != null) {
-    //   s.backgroundColor = colorConfig[props.config.color];
-    // }
 
     return (
       <div {...props} style={s}>
