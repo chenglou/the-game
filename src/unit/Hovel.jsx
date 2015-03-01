@@ -1,6 +1,6 @@
 var React = require('react');
 var url = require('../utils/imgUrl');
-var hovelImg = require('./stoneRoofShort.png');
+var hovelImg = require('../useful/Hovel.png');
 var assign = require('object-assign');
 
 var Hovel = React.createClass({

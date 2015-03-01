@@ -3,6 +3,42 @@ var Grid = require('../map/Grid');
 var positioner = require('../map/positioner');
 var React = require('react');
 var colorConfig = require('../../colorConfig');
+var url = require('../utils/imgUrl');
+
+var assetDims = require('../assetDims');
+var everyUnit = require('../everyUnit');
+
+var Fort = require('../useful/Fort.png');
+var Grass = require('../useful/Grass.png');
+var Hovel = require('../useful/Hovel.png');
+var Infantry = require('../useful/Infantry.png');
+var Knight = require('../useful/Knight.png');
+var Meadow = require('../useful/Meadow.png');
+var Pesant = require('../useful/Pesant.png');
+var Road = require('../useful/Road.png');
+var Sea = require('../useful/Sea.png');
+var Soldier = require('../useful/Soldier.png');
+var Tombstone = require('../useful/Tombstone.png');
+var Town = require('../useful/Town.png');
+var Tree = require('../useful/Tree.png');
+var Watchtower = require('../useful/Watchtower.png');
+
+var units = {
+  Fort: Fort,
+  Grass: Grass,
+  Hovel: Hovel,
+  Infantry: Infantry,
+  Knight: Knight,
+  Meadow: Meadow,
+  Pesant: Pesant,
+  Road: Road,
+  Sea: Sea,
+  Soldier: Soldier,
+  Tombstone: Tombstone,
+  Town: Town,
+  Tree: Tree,
+  Watchtower: Watchtower,
+};
 
 var out = M.clj_to_js;
 var p = React.PropTypes;
@@ -43,22 +79,40 @@ function surroundWithSea(map) {
 
 var LandBox = React.createClass({
   propTypes: {
-    color: p.number.isRequired,
+    unit: p.string.isRequired,
     selected: p.bool.isRequired,
   },
 
   render: function() {
     var props = this.props;
+    var unit = props.unit;
+
     var s = {
-      width: 50,
-      height: 50,
-      backgroundColor: colorConfig[props.color],
-      outline: props.selected ? '2px solid black' : 'none',
-      display: 'inline-block',
+      width: 70,
+      height: 100,
+      display: 'inline-flex',
+      flexDirection: 'column',
+      justifyContent: 'space-between',
+    };
+
+    var labelS = {
+      textAlign: 'center',
+      fontSize: 12,
+      color: props.selected ? 'red' : 'gray',
+    };
+
+    var imgS = {
+      width: assetDims[unit][0],
+      height: assetDims[unit][1],
+      alignSelf: 'center',
     };
 
     return (
       <div {...props} style={s}>
+        <img src={'./out/' + units[unit]} style={imgS} />
+        <div style={labelS}>
+          {unit}
+        </div>
       </div>
     );
   }
@@ -69,7 +123,7 @@ var Editor = React.createClass({
     var map = range(5, 0).map(() => range(10, 0));
     return {
       hover: [0, 0],
-      selectedLand: 0,
+      selectedLand: 'Grass',
       colors: surroundWithSea(map),
       clicking: false,
     };
@@ -103,9 +157,9 @@ var Editor = React.createClass({
     });
   },
 
-  handleTileOptionClick: function(selectedNum) {
+  handleTileOptionClick: function(unit) {
     this.setState({
-      selectedLand: selectedNum,
+      selectedLand: unit,
     });
   },
 
@@ -169,6 +223,10 @@ var Editor = React.createClass({
       height: positioner.calcH(25) * h + 25,
     };
 
+    var tilesBoxS = {
+      display: 'flex',
+    };
+
     return (
       <div>
         <div style={configBox}>
@@ -190,22 +248,15 @@ var Editor = React.createClass({
           </div>
 
           Lands:
-          <div>
-            <LandBox
-              color={0}
-              onClick={this.handleTileOptionClick.bind(null, 0)}
-              selected={state.selectedLand === 0}>
-            </LandBox>
-            <LandBox
-              color={1}
-              onClick={this.handleTileOptionClick.bind(null, 1)}
-              selected={state.selectedLand === 1}>
-            </LandBox>
-            <LandBox
-              color={2}
-              onClick={this.handleTileOptionClick.bind(null, 2)}
-              selected={state.selectedLand === 2}>
-            </LandBox>
+          <div style={tilesBoxS}>
+            {everyUnit.map(function(unit) {
+              return (
+                <LandBox
+                  unit={unit}
+                  onClick={this.handleTileOptionClick.bind(null, unit)}
+                  selected={state.selectedLand === unit} />
+              );
+            }, this)}
           </div>
         </div>
 
