@@ -5,6 +5,7 @@ var Tile = require('../Tile');
 var M = require('mori');
 var assign = require('object-assign');
 var everyUnit = require('../everyUnit');
+var unitFactory = require('../unitFactory');
 
 var p = React.PropTypes;
 
@@ -37,7 +38,7 @@ var Grid = React.createClass({
         var orderedCells = orderUnitsForDisplay(M.keys(cell));
 
         var units = M.map((unitName) => {
-           var Unit = everyUnit.comp[unitName];
+           var Unit = unitFactory[unitName];
            return (
              <Unit
                onMouseDown={props.tileMouseDown.bind(null, i, j)}
