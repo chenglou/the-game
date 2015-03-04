@@ -222,6 +222,13 @@ var Editor = React.createClass({
     });
   },
 
+  handleTextAreaChange: function(e) {
+    var value = e.target.value;
+    this.setState({
+      tiles: M.toClj(JSON.parse(value))
+    });
+  },
+
   render: function() {
     var state = this.state;
     var tiles = state.tiles;
@@ -291,7 +298,7 @@ var Editor = React.createClass({
 
         <textarea
           value={JSON.stringify(M.toJs(state.tiles))}
-          readOnly
+          onChange={this.handleTextAreaChange}
           cols={60}
           rows={20} />
       </div>

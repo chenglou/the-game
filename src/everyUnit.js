@@ -23,9 +23,9 @@ var everyUnitNameInDisplayOrder = {
   'Town': 2,
   'Fort': 2,
 
-  'Meadow': 3,
   'Road': 3,
 
+  'Meadow': 4,
   'Tree': 4,
 
   'Tombstone': 5,

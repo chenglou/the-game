@@ -39,11 +39,11 @@ var coexistances = {
   ],
   'Meadow': [
     'Pesant', 'Infantry', 'Soldier', 'Knight', 'Grass', 'Tree', 'Watchtower',
-    'Tombstone'
+    'Tombstone', 'Road'
   ],
   'Road': [
     'Pesant', 'Infantry', 'Soldier', 'Knight', 'Grass', 'Watchtower',
-    'Tombstone'
+    'Tombstone', 'Meadow'
   ],
   'Sea': [],
   'Tombstone': ['Grass', 'Meadow', 'Road'],

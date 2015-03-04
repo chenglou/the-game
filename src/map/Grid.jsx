@@ -35,6 +35,7 @@ var Grid = React.createClass({
     var lands = M.map((i, row) => {
       var cells = M.map((j, cell) => {
         var orderedCells = orderUnitsForDisplay(M.keys(cell));
+
         var units = M.map((unitName) => {
            var Unit = everyUnit.comp[unitName];
            return (
