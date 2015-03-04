@@ -6,24 +6,16 @@ var M = require('mori');
 var assign = require('object-assign');
 var everyUnit = require('../everyUnit');
 
-var out = M.clj_to_js;
 var p = React.PropTypes;
 
-function mapObj(obj, f) {
-  var res = [];
-  for (var key in obj) {
-    if (!obj.hasOwnProperty(key)) {
-      continue;
-    }
-    res.push(f(obj[key], key));
-  }
-
-  return res;
+function orderUnitsForDisplay(unitNames) {
+  var nameInDisplayOrder = everyUnit.nameInDisplayOrder;
+  return M.sort((a, b) => nameInDisplayOrder[a] - nameInDisplayOrder[b], unitNames);
 }
 
 var Grid = React.createClass({
   propTypes: {
-    tileConfigs: p.arrayOf(p.array.isRequired).isRequired,
+    // tileConfigs: p.arrayOf(p.array.isRequired).isRequired,
     unitConfigs: p.arrayOf(p.array.isRequired),
     tileMouseDown: p.func.isRequired,
     tileHover: p.func.isRequired,
@@ -31,41 +23,38 @@ var Grid = React.createClass({
 
   render: function() {
     var props = this.props;
+    var tileConfigs = props.tileConfigs;
 
-    var h = props.tileConfigs.length;
-    var w = props.tileConfigs[0].length;
+    var h = M.count(tileConfigs);
+    var w = M.count(M.first(tileConfigs));
 
     var rowS = {
       width: 9999,
     };
 
-    var lands = M.map((i) => {
-      var cells = M.map((j) => {
-            // <Land
-            //   pos={[i, j]}
-            //   config={props.tileConfigs[i][j]}
-            //   onMouseDown={props.tileMouseDown.bind(null, i, j)}
-            //   onMouseEnter={props.tileHover.bind(null, i, j)} />
-        var unitNames = Object.keys(props.tileConfigs[i][j]);
+    var lands = M.map((i, row) => {
+      var cells = M.map((j, cell) => {
+        var orderedCells = orderUnitsForDisplay(M.keys(cell));
+        var units = M.map((unitName) => {
+           var Unit = everyUnit.comp[unitName];
+           return (
+             <Unit
+               onMouseDown={props.tileMouseDown.bind(null, i, j)}
+               onMouseEnter={props.tileHover.bind(null, i, j)}>
+             </Unit>
+           );
+        }, orderedCells);
+
         return (
           <Tile key={j} diagLength={25} pos={[i, j]}>
-            {i}, {j}
-
-            {unitNames.map(function(unitName) {
-              var Unit = everyUnit.comp[unitName];
-              return (
-                <Unit
-                  onMouseDown={props.tileMouseDown.bind(null, i, j)}
-                  onMouseEnter={props.tileHover.bind(null, i, j)}>
-                </Unit>
-              );
-            })}
+            {M.toJs(units)}
+            {i + ',' + j}
           </Tile>
         );
-      }, M.range(w));
+      }, M.range(), row);
 
-      return <div key={i} style={rowS}>{out(cells)}</div>;
-    }, M.range(h));
+      return <div key={i} style={rowS}>{M.toJs(cells)}</div>;
+    }, M.range(), tileConfigs);
 
     var maybeUnits = null;
     if (props.unitConfigs) {
@@ -75,7 +64,6 @@ var Grid = React.createClass({
             return null;
           }
           var Unit = cell.component;
-          // Unit = tileConfigs[i][j]
           return (
             <Tile
               key={j}
@@ -95,7 +83,7 @@ var Grid = React.createClass({
 
     var s = {
       WebkitUserSelect: 'none',
-      height: positioner.calcH(25) * props.tileConfigs.length,
+      height: positioner.calcH(25) * M.count(tileConfigs),
     };
     var tilesS = {
       position: 'absolute',
@@ -106,7 +94,7 @@ var Grid = React.createClass({
     return (
       <div style={s}>
         <div style={tilesS}>
-          {out(lands)}
+          {M.toJs(lands)}
         </div>
         <div style={unitsS}>
           {maybeUnits}

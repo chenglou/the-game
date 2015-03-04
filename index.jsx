@@ -1,4 +1,3 @@
-var M = require('mori');
 var React = require('react');
 var Land = require('./src/map/Land');
 var Grid = require('./src/map/Grid');
@@ -6,8 +5,6 @@ var Hovel = require('./src/unit/Hovel');
 var unitConfig = require('./src/unit/unitConfig');
 
 var map1 = require('./src/map/data/map1');
-
-var out = M.clj_to_js;
 
 function range(n, val) {
   var ret = [];

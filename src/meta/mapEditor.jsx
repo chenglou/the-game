@@ -9,54 +9,83 @@ var coexistances = require('../coexistances');
 var assetDims = require('../assetDims');
 var everyUnit = require('../everyUnit');
 
-var out = M.clj_to_js;
 var p = React.PropTypes;
 
-function range(n, val) {
-  var ret = [];
-  for (var i = 0; i < n; i++) {
-    ret.push(val);
-  }
-  return ret;
-}
+// function range(n, val) {
+//   var ret = [];
+//   for (var i = 0; i < n; i++) {
+//     ret.push(val);
+//   }
+//   return ret;
+// }
 
-function shallowClone(arr) {
-  return arr.map((a) => a);
-}
+// function shallowCloneObj(obj) {
+//   var ret = {};
+//   for (var key in obj) {
+//     if (!obj.hasOwnProperty(key)) {
+//       continue;
+//     }
+//     ret[key] = obj[key];
+//   }
+
+//   return ret;
+// }
+
+// function shallowClone(arr) {
+//   return arr.map((a) => a);
+// }
 
 // clone the 2d array structure
-function shallowCloneMap(map) {
-  return shallowClone(map.map((row) => shallowClone(row)));
-}
+// function shallowCloneMap(map) {
+//   return shallowClone(map.map((row) => shallowClone(row)));
+// }
 
-function genConfig() {
-
+function butLast(coll) {
+  return M.map(M.identity, coll, M.rest(coll));
 }
 
 function surroundWithSea(map) {
-  var newMap = shallowCloneMap(map);
-  // verticals
-  for (var i = 0; i < newMap.length; i++) {
-    var row = newMap[i];
-    row[0] = {
-      Sea: {},
-    };
-    row[row.length - 1] = {
-      Sea: {},
-    };
-  }
-  // horizontals
-  for (var i = 0; i < newMap[0].length; i++) {
-    newMap[0][i] = {
-      Sea: {},
-    };
-    newMap[newMap.length - 1][i] = {
-      Sea: {},
-    };
-  }
+  var seaConfig = M.toClj({
+    Sea: {}
+  });
+  var rowLength = M.count(M.first(map));
+
+  var row = M.repeat(rowLength, seaConfig);
+
+  var newMap = M.concat([row], butLast(M.rest(map)), [row]);
+
+  // columns
+  newMap = M.map((row) => {
+    return M.concat([seaConfig], butLast(M.rest(row)), [seaConfig]);
+  }, newMap);
 
   return newMap;
 }
+
+// function surroundWithSea(map) {
+//   var newMap = shallowCloneMap(map);
+//   // verticals
+//   for (var i = 0; i < newMap.length; i++) {
+//     var row = newMap[i];
+//     row[0] = {
+//       Sea: {},
+//     };
+//     row[row.length - 1] = {
+//       Sea: {},
+//     };
+//   }
+//   // horizontals
+//   for (var i = 0; i < newMap[0].length; i++) {
+//     newMap[0][i] = {
+//       Sea: {},
+//     };
+//     newMap[newMap.length - 1][i] = {
+//       Sea: {},
+//     };
+//   }
+
+//   return newMap;
+// }
 
 var LandBox = React.createClass({
   propTypes: {
@@ -99,11 +128,17 @@ var LandBox = React.createClass({
   }
 });
 
+function mapSeqToVec(map) {
+  return M.into(M.vector(), M.map((row) => M.into(M.vector(), row), map));
+}
+
 var Editor = React.createClass({
   getInitialState: function() {
-    var map = range(5, 0).map(() => range(10, {
-      Grass: {},
+    var row = M.repeat(10, M.toClj({
+      Grass: {}
     }));
+
+    var map = M.repeat(5, row);
 
     return {
       hover: [0, 0],
@@ -119,25 +154,19 @@ var Editor = React.createClass({
       return;
     }
     var tiles = this.state.tiles;
-    var w = tiles[0].length;
-    var h = tiles.length;
+    var grassConfig = M.toClj({
+      Grass: {}
+    });
+    var w = M.count(M.first(tiles));
+    var h = M.count(tiles);
 
     if (state === 'w') {
-      if (val > w) {
-        tiles = tiles.map((row) => row.concat(range(val - w, {
-          Grass: {},
-        })));
-      } else {
-        tiles = tiles.map((row) => row.slice(0, val));
-      }
+      tiles = M.map((row) => {
+        return M.take(val, M.concat(row, M.repeat(grassConfig)));
+      }, tiles);
     } else {
-      if (val > h) {
-        tiles = tiles.concat(range(val - h, 0).map(() => range(w, {
-          Grass: {},
-        })));
-      } else {
-        tiles = tiles.slice(0, val);
-      }
+      var row = M.repeat(val, grassConfig);
+      tiles = M.take(val, M.concat(tiles, M.repeat(row)));
     }
 
     this.setState({
@@ -151,23 +180,30 @@ var Editor = React.createClass({
     });
   },
 
-  handleTileMouseDown: function(i, j) {
-    var tiles = this.state.tiles;
+  getNewTiles: function(i, j) {
+    var tiles = mapSeqToVec(this.state.tiles);
+    var selectedUnit = this.state.selectedUnit;
+    var tile = M.toJs(M.getIn(tiles, [i, j]));
 
-    tiles[i][j] = {}
-    tiles[i][j][this.state.selectedUnit] = {};
+    for (var key in tile) {
+      if (!coexistances[selectedUnit][key]) {
+        delete tile[key];
+      }
+    }
+
+    tile[selectedUnit] = {};
+    // debugger;
+    return M.updateIn(tiles, [i, j], () => M.toClj(tile));
+  },
+
+  handleTileMouseDown: function(i, j) {
     this.setState({
-      tiles: tiles,
+      tiles: this.getNewTiles(i, j),
     });
   },
 
   handleTileHover: function(i, j) {
-    var tiles = this.state.tiles;
-    if (this.state.clicking) {
-      tiles[i][j] = {}
-      tiles[i][j][this.state.selectedUnit] = {};
-    }
-
+    var tiles = this.state.clicking ? this.getNewTiles(i, j) : this.state.tiles;
     this.setState({
       hover: [i, j],
       tiles: tiles,
@@ -188,18 +224,10 @@ var Editor = React.createClass({
 
   render: function() {
     var state = this.state;
+    var tiles = state.tiles;
 
-    var w = state.tiles[0].length;
-    var h = state.tiles.length;
-
-    // var configs = state.tiles.map((row) => {
-    //   return row.map((cell) => {
-    //     return {
-    //       landType: 1,
-    //       color: cell,
-    //     };
-    //   });
-    // });
+    var w = M.count(M.first(tiles));
+    var h = M.count(tiles);
 
     var configBox = {
       border: '1px solid black',
@@ -237,7 +265,7 @@ var Editor = React.createClass({
 
           Lands:
           <div style={tilesBoxS}>
-            {everyUnit.name.map(function(unit) {
+            {Object.keys(everyUnit.nameInDisplayOrder).map(function(unit) {
               return (
                 <LandBox
                   unit={unit}
@@ -253,7 +281,7 @@ var Editor = React.createClass({
             className="gridWrapper"
             style={gridWrapper}
             onMouseDown={this.handleMouseDown}
-            onMouseUp={this.handleMouseUp} >
+            onMouseUp={this.handleMouseUp}>
             <Grid
               tileConfigs={state.tiles}
               tileMouseDown={this.handleTileMouseDown}
@@ -262,7 +290,7 @@ var Editor = React.createClass({
         </div>
 
         <textarea
-          value={JSON.stringify(state.tiles)}
+          value={JSON.stringify(M.toJs(state.tiles))}
           readOnly
           cols={60}
           rows={20} />

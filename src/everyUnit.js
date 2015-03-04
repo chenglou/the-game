@@ -15,22 +15,28 @@ var everyUnitImg = {
   Watchtower: require('./useful/Watchtower.png'),
 };
 
-var everyUnitName = [
-  'Fort',
-  'Grass',
-  'Hovel',
-  'Infantry',
-  'Knight',
-  'Meadow',
-  'Pesant',
-  'Road',
-  'Sea',
-  'Soldier',
-  'Tombstone',
-  'Town',
-  'Tree',
-  'Watchtower',
-];
+var everyUnitNameInDisplayOrder = {
+  'Grass': 1,
+  'Sea': 1,
+
+  'Hovel': 2,
+  'Town': 2,
+  'Fort': 2,
+
+  'Meadow': 3,
+  'Road': 3,
+
+  'Tree': 4,
+
+  'Tombstone': 5,
+
+  'Watchtower': 6,
+
+  'Pesant': 7,
+  'Infantry': 7,
+  'Soldier': 7,
+  'Knight': 7,
+};
 
 var everyUnitComp = {
   Fort: require('./unit/Fort'),
@@ -50,7 +56,7 @@ var everyUnitComp = {
 };
 
 var everyUnit = {
-  name: everyUnitName,
+  nameInDisplayOrder: everyUnitNameInDisplayOrder,
   img: everyUnitImg,
   comp: everyUnitComp,
 };
