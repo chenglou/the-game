@@ -4,7 +4,7 @@ var assetDims = {
   Hovel: [65, 68],
   Infantry: [40, 66],
   Knight: [40, 66],
-  Meadow: [12, 11],
+  Meadow: [36, 33],
   Pesant: [40, 66],
   Road: [65, 89],
   Sea: [65, 89],
