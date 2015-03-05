@@ -244,6 +244,7 @@ var Editor = React.createClass({
             {Object.keys(everyUnit.nameInDisplayOrder).map(function(unit) {
               return (
                 <LandBox
+                  key={unit}
                   unit={unit}
                   onClick={this.handleTileOptionClick.bind(null, unit)}
                   selected={state.selectedUnit === unit} />
@@ -285,6 +286,7 @@ var Editor = React.createClass({
         </div>
 
         <textarea
+          style={{WebkitUserSelect: 'inherit'}}
           value={JSON.stringify(M.toJs(state.tiles))}
           onChange={this.handleTextAreaChange}
           cols={60}
