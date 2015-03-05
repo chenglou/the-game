@@ -6,6 +6,10 @@ var M = require('mori');
 var assign = require('object-assign');
 var everyUnit = require('../everyUnit');
 var unitFactory = require('../unitFactory');
+var overlayBlue = require('../overlayBlue.png');
+var overlayRed = require('../overlayRed.png');
+var assetDims = require('../assetDims');
+var url = require('../utils/imgUrl');
 
 var p = React.PropTypes;
 
@@ -33,24 +37,46 @@ var Grid = React.createClass({
       width: 9999,
     };
 
-    var lands = M.map((i, row) => {
+    var overlayW = assetDims.misc.overlay[0];
+    var overlayH = assetDims.misc.overlay[1];
+
+    var tiles = M.map((i, row) => {
       var cells = M.map((j, cell) => {
-        var orderedCells = orderUnitsForDisplay(M.keys(cell));
+        var units = M.get(cell, 'units');
+        var orderedUnits = orderUnitsForDisplay(M.keys(units));
 
         var units = M.map((unitName) => {
-           var Unit = unitFactory[unitName];
-           return (
-             <Unit
-               onMouseDown={props.tileMouseDown.bind(null, i, j)}
-               onMouseEnter={props.tileHover.bind(null, i, j)}>
-             </Unit>
-           );
-        }, orderedCells);
+          var Unit = unitFactory[unitName];
+
+          return (
+            <Unit></Unit>
+          );
+        }, orderedUnits);
+
+        var color = M.get(cell, 'color');
+        var overlay = color === 'Blue' ? url(overlayBlue)
+          : color === 'Red' ? url(overlayRed)
+          : 'none';
+
+        var overlayS = {
+          backgroundImage: overlay,
+          backgroundRepeat: 'no-repeat',
+          opacity: 0.4,
+          width: overlayW,
+          height: overlayH,
+          marginLeft: (positioner.calcW() - overlayW) / 2,
+        };
 
         return (
-          <Tile key={j} diagLength={25} pos={[i, j]}>
-            {M.toJs(units)}
-            {i + ',' + j}
+          <Tile
+            key={j}
+            diagLength={25}
+            pos={[i, j]}
+            onMouseDown={props.tileMouseDown.bind(null, i, j)}
+            onMouseEnter={props.tileHover.bind(null, i, j)}>
+              {M.toJs(units)}
+              <div style={overlayS}></div>
+              {i + ',' + j}
           </Tile>
         );
       }, M.range(), row);
@@ -96,7 +122,7 @@ var Grid = React.createClass({
     return (
       <div style={s}>
         <div style={tilesS}>
-          {M.toJs(lands)}
+          {M.toJs(tiles)}
         </div>
         <div style={unitsS}>
           {maybeUnits}

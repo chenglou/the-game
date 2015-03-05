@@ -1,5 +1,5 @@
 var assetDims = {
-  Fort: [65, 92],
+  Fort: [65, 68],
   Grass: [65, 89],
   Hovel: [65, 68],
   Infantry: [40, 66],
@@ -13,6 +13,9 @@ var assetDims = {
   Town: [66, 68],
   Tree: [30, 79],
   Watchtower: [32, 66],
+  misc: {
+    overlay: [65, 68]
+  },
 };
 
 module.exports = assetDims;

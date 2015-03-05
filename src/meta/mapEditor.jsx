@@ -11,81 +11,30 @@ var everyUnit = require('../everyUnit');
 
 var p = React.PropTypes;
 
-// function range(n, val) {
-//   var ret = [];
-//   for (var i = 0; i < n; i++) {
-//     ret.push(val);
-//   }
-//   return ret;
-// }
-
-// function shallowCloneObj(obj) {
-//   var ret = {};
-//   for (var key in obj) {
-//     if (!obj.hasOwnProperty(key)) {
-//       continue;
-//     }
-//     ret[key] = obj[key];
-//   }
-
-//   return ret;
-// }
-
-// function shallowClone(arr) {
-//   return arr.map((a) => a);
-// }
-
-// clone the 2d array structure
-// function shallowCloneMap(map) {
-//   return shallowClone(map.map((row) => shallowClone(row)));
-// }
-
 function butLast(coll) {
   return M.map(M.identity, coll, M.rest(coll));
 }
 
 function surroundWithSea(map) {
-  var seaConfig = M.toClj({
-    Sea: {}
+  var seaTileConfig = M.toClj({
+    units: {
+      Sea: {}
+    },
+    color: 'Gray',
   });
   var rowLength = M.count(M.first(map));
 
-  var row = M.repeat(rowLength, seaConfig);
+  var row = M.repeat(rowLength, seaTileConfig);
 
   var newMap = M.concat([row], butLast(M.rest(map)), [row]);
 
   // columns
   newMap = M.map((row) => {
-    return M.concat([seaConfig], butLast(M.rest(row)), [seaConfig]);
+    return M.concat([seaTileConfig], butLast(M.rest(row)), [seaTileConfig]);
   }, newMap);
 
   return newMap;
 }
-
-// function surroundWithSea(map) {
-//   var newMap = shallowCloneMap(map);
-//   // verticals
-//   for (var i = 0; i < newMap.length; i++) {
-//     var row = newMap[i];
-//     row[0] = {
-//       Sea: {},
-//     };
-//     row[row.length - 1] = {
-//       Sea: {},
-//     };
-//   }
-//   // horizontals
-//   for (var i = 0; i < newMap[0].length; i++) {
-//     newMap[0][i] = {
-//       Sea: {},
-//     };
-//     newMap[newMap.length - 1][i] = {
-//       Sea: {},
-//     };
-//   }
-
-//   return newMap;
-// }
 
 var LandBox = React.createClass({
   propTypes: {
@@ -135,7 +84,10 @@ function mapSeqToVec(map) {
 var Editor = React.createClass({
   getInitialState: function() {
     var row = M.repeat(10, M.toClj({
-      Grass: {}
+      units: {
+        Grass: {},
+      },
+      color: 'Gray',
     }));
 
     var map = M.repeat(5, row);
@@ -143,6 +95,7 @@ var Editor = React.createClass({
     return {
       hover: [0, 0],
       selectedUnit: 'Grass',
+      selectedColor: 'Red',
       tiles: surroundWithSea(map),
       clicking: false,
     };
@@ -154,18 +107,21 @@ var Editor = React.createClass({
       return;
     }
     var tiles = this.state.tiles;
-    var grassConfig = M.toClj({
-      Grass: {}
+    var grassTileConfig = M.toClj({
+      units: {
+        Grass: {}
+      },
+      color: 'Gray',
     });
     var w = M.count(M.first(tiles));
     var h = M.count(tiles);
 
     if (state === 'w') {
       tiles = M.map((row) => {
-        return M.take(val, M.concat(row, M.repeat(grassConfig)));
+        return M.take(val, M.concat(row, M.repeat(grassTileConfig)));
       }, tiles);
     } else {
-      var row = M.repeat(val, grassConfig);
+      var row = M.repeat(val, grassTileConfig);
       tiles = M.take(val, M.concat(tiles, M.repeat(row)));
     }
 
@@ -185,14 +141,15 @@ var Editor = React.createClass({
     var selectedUnit = this.state.selectedUnit;
     var tile = M.toJs(M.getIn(tiles, [i, j]));
 
-    for (var key in tile) {
+    for (var key in tile.units) {
       if (!coexistances[selectedUnit][key]) {
-        delete tile[key];
+        delete tile.units[key];
       }
     }
 
-    tile[selectedUnit] = {};
-    // debugger;
+    tile.units[selectedUnit] = {};
+    tile.color = this.state.selectedColor;
+
     return M.updateIn(tiles, [i, j], () => M.toClj(tile));
   },
 
@@ -229,6 +186,10 @@ var Editor = React.createClass({
     });
   },
 
+  handleColorClick: function(color) {
+    this.setState({selectedColor: color});
+  },
+
   render: function() {
     var state = this.state;
     var tiles = state.tiles;
@@ -239,7 +200,7 @@ var Editor = React.createClass({
     var configBox = {
       border: '1px solid black',
       width: 1000,
-      height: 200,
+      height: 250,
     };
 
     var gridWrapper = {
@@ -249,6 +210,18 @@ var Editor = React.createClass({
     var tilesBoxS = {
       display: 'flex',
     };
+
+    function colorS(color) {
+      return {
+        backgroundColor: color,
+        // display: 'flex',
+        width: 50,
+        height: 50,
+        color: 'white',
+        outline: state.selectedColor === color ? '2px solid black' : 'none',
+        margin: 1,
+      };
+    }
 
     return (
       <div>
@@ -270,7 +243,7 @@ var Editor = React.createClass({
             {state.hover[0]}, {state.hover[1]}
           </div>
 
-          Lands:
+          Units:
           <div style={tilesBoxS}>
             {Object.keys(everyUnit.nameInDisplayOrder).map(function(unit) {
               return (
@@ -280,6 +253,25 @@ var Editor = React.createClass({
                   selected={state.selectedUnit === unit} />
               );
             }, this)}
+          </div>
+
+          Colors:
+          <div style={tilesBoxS}>
+            <div
+              onClick={this.handleColorClick.bind(null, 'Red')}
+              style={colorS('Red')}>
+                Red
+            </div>
+            <div
+              onClick={this.handleColorClick.bind(null, 'Blue')}
+              style={colorS('Blue')}>
+                Blue
+            </div>
+            <div
+              onClick={this.handleColorClick.bind(null, 'Gray')}
+              style={colorS('Gray')}>
+                Gray
+            </div>
           </div>
         </div>
 
