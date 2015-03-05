@@ -14,7 +14,7 @@ module.exports = {
   plugins: [commonsPlugin],
   module: {
     loaders: [
-      {test: /\.jsx$/, loader: 'jsx-loader?harmony'},
+      {test: /\.jsx?$/, loader: 'jsx-loader?harmony'},
       {test: /\.(png|jpg)$/, loader: 'url-loader?limit=1'},
     ]
   },

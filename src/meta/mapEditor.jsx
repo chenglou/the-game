@@ -4,6 +4,7 @@ var positioner = require('../map/positioner');
 var React = require('react');
 var url = require('../utils/imgUrl');
 var coexistances = require('../coexistances');
+var mapSeqToVec = require('../mapSeqToVec');
 
 var assetDims = require('../assetDims');
 var everyUnit = require('../everyUnit');
@@ -75,10 +76,6 @@ var LandBox = React.createClass({
     );
   }
 });
-
-function mapSeqToVec(map) {
-  return M.into(M.vector(), M.map((row) => M.into(M.vector(), row), map));
-}
 
 var Editor = React.createClass({
   getInitialState: function() {
