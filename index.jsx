@@ -34,18 +34,28 @@ function updateVillagesGold(map, amount) {
   }, map);
 }
 
+function findUnitCoords(map, unitName) {
+  var map = mapSeqToVec(map);
+
+  return M.mapcat((row, i) => {
+    var maybeCoords = M.map((cell, j) => {
+      return M.getIn(cell, ['units', unitName]) ? [i, j] : null;
+    }, row, M.range());
+
+    return M.filter(M.identity, maybeCoords);
+  }, map, M.range());
+}
+
 function growTrees(map) {
   var map = mapSeqToVec(map);
 
-  var treeCoords = M.mapcat((row, i) => {
-    var maybeTreeCoordsRow = M.map((cell, j) => {
-      return M.getIn(cell, ['units', 'Tree']) ? [i, j] : null;
-    }, row, M.range());
-
-    return M.filter(M.identity, maybeTreeCoordsRow);
-  }, map, M.range());
+  var treeCoords = findUnitCoords(map, 'Tree');
 
   return M.reduce((map, coords) => {
+    if (Math.random() > 0.5) {
+      return map;
+    }
+
     var [i, j] = coords;
     var emptyNeighbors = findNeighbors(map, i, j).filter((coords) => {
       var [i, j] = coords;
@@ -66,11 +76,33 @@ function growTrees(map) {
   }, map, treeCoords);
 }
 
+function tombstonesToTrees(map, turn) {
+  return M.map((row) => {
+    return M.map((cell) => {
+      if (M.get(cell, 'color') !== turn) {
+        return cell;
+      }
+
+      var tombstone = M.getIn(cell, ['units', 'Tombstone']);
+
+      if (!tombstone) {
+        return cell;
+      }
+
+      return M.updateIn(cell, ['units'], (config) => {
+        config = M.dissoc(config, 'Tombstone');
+        return M.assoc(config, 'Tree', M.hashMap());
+      });
+    }, row);
+  }, map);
+}
+
 var App = React.createClass({
   getInitialState: function() {
     return {
       hover: [0, 0],
       map: M.toClj(map1),
+      turn: 'Red',
     };
   },
 
@@ -79,11 +111,17 @@ var App = React.createClass({
       this.setState({
         map: updateVillagesGold(this.state.map, 7),
       });
-    }, 500);
+    }, 100);
 
     setTimeout(() => {
       this.setState({
         map: growTrees(this.state.map),
+      });
+    }, 500);
+
+    setTimeout(() => {
+      this.setState({
+        map: tombstonesToTrees(this.state.map, this.state.turn),
       });
     }, 1000);
   },
@@ -100,6 +138,7 @@ var App = React.createClass({
 
   render: function() {
     var state = this.state;
+    var hover = state.hover;
 
     var gridWrapper = {
       border: '1px solid black',
@@ -112,18 +151,12 @@ var App = React.createClass({
       height: 100,
     };
 
-        // <svg width="65" height="89" viewBox="0 0 560 645">
-        //   <polygon style={{stroke:'purple', strokeWidth:2}} fill="#64dcff" points="268,0 0,158 0,483 268,644 558,483 558,158" transform="translate(1, 1)" />
-        // </svg>
-
-    var [i, j] = state.hover;
-
     return (
       <div>
         <div style={consoleS}>
-          {i}, {j}
+          {JSON.stringify(hover)}
           <pre>
-            {JSON.stringify(M.toJs(M.getIn(mapSeqToVec(state.map), [i, j])), null, 2)}
+            {JSON.stringify(M.toJs(M.getIn(mapSeqToVec(state.map), hover)), null, 2)}
           </pre>
         </div>
         <div className="gridWrapper" style={gridWrapper}>
