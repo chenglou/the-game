@@ -38,27 +38,9 @@ var everyUnitNameInDisplayOrder = {
   'Knight': 7,
 };
 
-// var everyUnitComp = {
-//   Fort: require('./unit/Fort'),
-//   Grass: require('./unit/Grass'),
-//   Hovel: require('./unit/Hovel'),
-//   Infantry: require('./unit/Infantry'),
-//   Knight: require('./unit/Knight'),
-//   Meadow: require('./unit/Meadow'),
-//   Pesant: require('./unit/Pesant'),
-//   Road: require('./unit/Road'),
-//   Sea: require('./unit/Sea'),
-//   Soldier: require('./unit/Soldier'),
-//   Tombstone: require('./unit/Tombstone'),
-//   Town: require('./unit/Town'),
-//   Tree: require('./unit/Tree'),
-//   Watchtower: require('./unit/Watchtower'),
-// };
-
 var everyUnit = {
   nameInDisplayOrder: everyUnitNameInDisplayOrder,
   img: everyUnitImg,
-  // comp: everyUnitComp,
 };
 
 module.exports = everyUnit;

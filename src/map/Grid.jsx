@@ -1,5 +1,4 @@
 var React = require('react');
-var Land = require('./Land');
 var positioner = require('./positioner');
 var Tile = require('../Tile');
 var M = require('mori');
@@ -61,7 +60,7 @@ var Grid = React.createClass({
         var overlayS = {
           backgroundImage: overlay,
           backgroundRepeat: 'no-repeat',
-          opacity: 0.4,
+          opacity: 0.2,
           width: overlayW,
           height: overlayH,
           marginLeft: (positioner.calcW() - overlayW) / 2,
@@ -76,7 +75,6 @@ var Grid = React.createClass({
             onMouseEnter={props.tileHover.bind(null, i, j)}>
               {M.toJs(units)}
               <div style={overlayS}></div>
-              {i + ',' + j}
           </Tile>
         );
       }, M.range(), row);
@@ -85,29 +83,29 @@ var Grid = React.createClass({
     }, M.range(), tileConfigs);
 
     var maybeUnits = null;
-    if (props.unitConfigs) {
-      maybeUnits = props.unitConfigs.map((row, i) => {
-        var cells = row.map((cell, j) => {
-          if (!cell) {
-            return null;
-          }
-          var Unit = cell.component;
-          return (
-            <Tile
-              key={j}
-              diagLength={25}
-              pos={[i, j]}
-              config={props.unitConfigs[i][j]}>
-              <Unit
-                onMouseDown={props.tileMouseDown.bind(null, i, j)}
-                onMouseEnter={props.tileHover.bind(null, i, j)}/>
-            </Tile>
-          );
-        });
+    // if (props.unitConfigs) {
+    //   maybeUnits = props.unitConfigs.map((row, i) => {
+    //     var cells = row.map((cell, j) => {
+    //       if (!cell) {
+    //         return null;
+    //       }
+    //       var Unit = cell.component;
+    //       return (
+    //         <Tile
+    //           key={j}
+    //           diagLength={25}
+    //           pos={[i, j]}
+    //           config={props.unitConfigs[i][j]}>
+    //           <Unit
+    //             onMouseDown={props.tileMouseDown.bind(null, i, j)}
+    //             onMouseEnter={props.tileHover.bind(null, i, j)}/>
+    //         </Tile>
+    //       );
+    //     });
 
-        return <div key={i} style={rowS}>{cells}</div>;
-      });
-    }
+    //     return <div key={i} style={rowS}>{cells}</div>;
+    //   });
+    // }
 
     var s = {
       WebkitUserSelect: 'none',

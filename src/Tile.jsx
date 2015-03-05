@@ -1,5 +1,4 @@
 var React = require('react');
-var colorConfig = require('../colorConfig');
 var positioner = require('./map/positioner');
 
 var p = React.PropTypes;

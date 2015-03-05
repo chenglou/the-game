@@ -2,7 +2,6 @@ var M = require('mori');
 var Grid = require('../map/Grid');
 var positioner = require('../map/positioner');
 var React = require('react');
-var colorConfig = require('../../colorConfig');
 var url = require('../utils/imgUrl');
 var coexistances = require('../coexistances');
 

@@ -1,30 +1,3 @@
-// var village = [
-//   'Hovel',
-//   'Town',
-//   'Fort',
-// ];
-
-// var unit = [
-//   'Pesant',
-//   'Infantry',
-//   'Soldier',
-//   'Knight',
-// ];
-
-// var land = [
-//   'Sea',
-//   'Grass',
-//   'Tree',
-//   'Meadow',
-// ];
-
-// var structure = [
-//   'Watchtower',
-//   'Road',
-//   'Tombstone',
-// ];
-
-// note: let's say meadow is not a type of land
 var coexistances = {
   'Hovel': ['Grass', 'Watchtower'],
   'Town': ['Grass', 'Watchtower'],
