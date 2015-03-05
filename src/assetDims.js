@@ -14,7 +14,7 @@ var assetDims = {
   Tree: [30, 79],
   Watchtower: [32, 66],
   misc: {
-    overlay: [65, 68]
+    overlay: [69, 72],
   },
 };
 

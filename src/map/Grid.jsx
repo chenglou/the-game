@@ -60,7 +60,8 @@ var Grid = React.createClass({
         var overlayS = {
           backgroundImage: overlay,
           backgroundRepeat: 'no-repeat',
-          opacity: 0.2,
+          // opacity: 0.2,
+          top: -4,
           width: overlayW,
           height: overlayH,
           marginLeft: (positioner.calcW() - overlayW) / 2,
