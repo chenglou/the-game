@@ -51,15 +51,12 @@ function growTrees(map) {
 
   var treeCoords = findUnitCoords(map, 'Tree');
 
-  return M.reduce((map, coords) => {
+  return M.reduce((map, [i, j]) => {
     if (Math.random() > 0.5) {
       return map;
     }
 
-    var [i, j] = coords;
-    var emptyNeighbors = findNeighbors(map, i, j).filter((coords) => {
-      var [i, j] = coords;
-
+    var emptyNeighbors = findNeighbors(map, i, j).filter(([i, j]) => {
       return M.every((unitName) => {
         return coexistances[unitName].Tree;
       }, M.keys(M.getIn(map, [i, j, 'units'])));
@@ -97,6 +94,55 @@ function tombstonesToTrees(map, turn) {
   }, map);
 }
 
+function matureTiles(map, turn) {
+  map = matureMeadows(map, turn);
+  return matureRoads(map, turn);
+}
+
+function matureMeadows(map, turn) {
+  return M.map((row) => {
+    return M.map((cell) => {
+      if (M.get(cell, 'color') !== turn) {
+        return cell;
+      }
+
+      var meadow = M.getIn(cell, ['units', 'Meadow']);
+
+      if (!meadow) {
+        return cell;
+      }
+
+      return M.updateIn(cell, ['units', 'Meadow', 'cooldown'], (cooldown) => {
+        return cooldown ? cooldown - 1 : 0;
+      });
+    }, row);
+  }, map);
+}
+
+function matureRoads(map, turn) {
+  return M.map((row) => {
+    return M.map((cell) => {
+      if (M.get(cell, 'color') !== turn) {
+        return cell;
+      }
+
+      var road = M.getIn(cell, ['units', 'Road']);
+
+      if (!road) {
+        return cell;
+      }
+
+      return M.updateIn(cell, ['units', 'Road', 'cooldown'], (cooldown) => {
+        return cooldown ? cooldown - 1 : 0;
+      });
+    }, row);
+  }, map);
+}
+
+function addIncome(map, turn) {
+  return map;
+}
+
 var App = React.createClass({
   getInitialState: function() {
     return {
@@ -124,6 +170,18 @@ var App = React.createClass({
         map: tombstonesToTrees(this.state.map, this.state.turn),
       });
     }, 1000);
+
+    setTimeout(() => {
+      this.setState({
+        map: matureTiles(this.state.map, this.state.turn),
+      });
+    }, 1100);
+
+    setTimeout(() => {
+      this.setState({
+        map: addIncome(this.state.map, this.state.turn),
+      });
+    }, 1300);
   },
 
   handleTileMouseDown: function(i, j) {
