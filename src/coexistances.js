@@ -2,10 +2,12 @@ var coexistances = {
   'Hovel': ['Grass', 'Watchtower'],
   'Town': ['Grass', 'Watchtower'],
   'Fort': ['Grass', 'Watchtower'],
+
   'Pesant': ['Grass', 'Meadow', 'Road'],
   'Infantry': ['Grass', 'Meadow', 'Road'],
   'Soldier': ['Grass', 'Meadow', 'Road'],
   'Knight': ['Grass', 'Meadow', 'Road'],
+
   'Grass': [
     'Hovel', 'Town', 'Fort', 'Pesant', 'Infantry', 'Soldier', 'Knight', 'Tree',
     'Meadow', 'Watchtower', 'Road', 'Tombstone'

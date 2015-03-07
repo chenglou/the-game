@@ -185,7 +185,7 @@ function addIncome(map, turn) {
 
       // this is only determined by the land type (sea, grass, meadow, tree)
       // conceptually tree is a landtype
-      var amount = get('Tree')? 0
+      var amount = get('Tree') ? 0
         : get('Meadow') && M.get(get('Meadow'), 'cooldown') === 0 ? 2
         : 1;
 
@@ -205,6 +205,126 @@ function addIncome(map, turn) {
       return M.updateIn(config, [typeName, 'gold'], (oldAmount) => oldAmount + sum);
     });
   }, map, villageCoords);
+}
+
+function payTime(map, turn) {
+  var map = mapSeqToVec(map);
+
+  var villageCoords = getUnitCoords(map, (cell) => {
+    return (
+      (M.getIn(cell, ['units', 'Hovel']) ||
+        M.getIn(cell, ['units', 'Town']) ||
+        M.getIn(cell, ['units', 'Fort'])) &&
+      M.get(cell, 'color') === turn
+    );
+  });
+
+  return M.reduce((map, [i, j]) => {
+    var sum = findRegionForVillage(map, [i, j]).reduce((sum, [i, j]) => {
+      var config = M.getIn(map, [i, j, 'units']);
+      var get = (unitName) => M.get(config, unitName);
+
+      var amount = get('Pesant') ? 2
+        : get('Infantry') ? 6
+        : get('Soldier') ? 18
+        : get('Knight') ? 54
+        : 0;
+
+      return sum + amount;
+    }, 0);
+
+    return M.updateIn(map, [i, j, 'units'], (config) => {
+      var hovel = M.get(config, 'Hovel');
+      var town = M.get(config, 'Town');
+      var fort = M.get(config, 'Fort');
+
+      var typeName = hovel ? 'Hovel' :
+        town ? 'Town':
+        fort ? 'Fort'
+        : null;
+
+      return M.updateIn(config, [typeName, 'gold'], (oldAmount) => oldAmount - sum);
+    });
+  }, map, villageCoords);
+}
+
+function dissocIn(coll, path) {
+  var p1 = path.slice(0, -1);
+  var p2 = path[path.length - 1];
+  return M.updateIn(coll, p1, (o) => M.dissoc(o, p2));
+}
+
+function dieTime(map, turn) {
+  var map = mapSeqToVec(map);
+
+  var villageCoords = getUnitCoords(map, (cell) => {
+    return (
+      (M.getIn(cell, ['units', 'Hovel']) ||
+        M.getIn(cell, ['units', 'Town']) ||
+        M.getIn(cell, ['units', 'Fort'])) &&
+      M.get(cell, 'color') === turn
+    );
+  });
+
+  return M.reduce((map, [i, j]) => {
+    var config = M.getIn(map, [i, j, 'units']);
+
+    var hovel = M.get(config, 'Hovel');
+    var town = M.get(config, 'Town');
+    var fort = M.get(config, 'Fort');
+
+    var typeName = hovel ? 'Hovel' :
+      town ? 'Town':
+      fort ? 'Fort'
+      : null; // can't be
+
+    var gold = M.getIn(config, [typeName, 'gold']);
+    if (gold >= 0) {
+      return map;
+    }
+
+    // reset negative gold to 0
+    map = M.assocIn(map, [i, j, 'units', typeName, 'gold'], 0);
+
+    // turn units into tombstones
+    var units = findRegionForVillage(map, [i, j]).filter(([i, j]) => {
+      var config = M.getIn(map, [i, j, 'units']);
+
+      var pesant = M.get(config, 'Pesant');
+      var infantry = M.get(config, 'Infantry');
+      var soldier = M.get(config, 'Soldier');
+      var knight = M.get(config, 'Knight');
+
+      if (pesant || infantry || soldier || knight) {
+        return [i, j];
+      }
+    }, 0);
+
+    return units.reduce((map, [i, j]) => {
+      var config = M.getIn(map, [i, j, 'units']);
+
+      var pesant = M.get(config, 'Pesant');
+      var infantry = M.get(config, 'Infantry');
+      var soldier = M.get(config, 'Soldier');
+      var knight = M.get(config, 'Knight');
+
+      var typeName = pesant ? 'Pesant'
+        : infantry ? 'Infantry'
+        : soldier ? 'Soldier'
+        : knight ? 'Knight'
+        : null; // impossible
+
+      map = dissocIn(map, [i, j, 'units', typeName]);
+      return M.assocIn(map, [i, j, 'units', 'Tombstone'], M.hashMap());
+    }, map);
+  }, map, villageCoords);
+}
+
+function payOrDie(map, turn) {
+  var map = mapSeqToVec(map);
+
+  map = payTime(map, turn);
+  return dieTime(map, turn);
 }
 
 var App = React.createClass({
@@ -246,6 +366,12 @@ var App = React.createClass({
         map: addIncome(this.state.map, this.state.turn),
       });
     }, 1300);
+
+    setTimeout(() => {
+      this.setState({
+        map: payOrDie(this.state.map, this.state.turn),
+      });
+    }, 1600);
   },
 
   handleTileMouseDown: function(i, j) {
