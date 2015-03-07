@@ -8,6 +8,20 @@ var mapSeqToVec = require('./src/mapSeqToVec');
 
 var map1 = require('./src/map/data/map1');
 
+var js = M.toJs;
+
+function getUnitCoords(map, f) {
+  var map = mapSeqToVec(map);
+
+  return M.mapcat((row, i) => {
+    var maybeCoords = M.map((cell, j) => {
+      return f(cell) ? [i, j] : null;
+    }, row, M.range());
+
+    return M.filter(M.identity, maybeCoords);
+  }, map, M.range());
+}
+
 function updateVillagesGold(map, amount) {
   return M.map((row) => {
     return M.map((cell) => {
@@ -34,22 +48,10 @@ function updateVillagesGold(map, amount) {
   }, map);
 }
 
-function findUnitCoords(map, unitName) {
-  var map = mapSeqToVec(map);
-
-  return M.mapcat((row, i) => {
-    var maybeCoords = M.map((cell, j) => {
-      return M.getIn(cell, ['units', unitName]) ? [i, j] : null;
-    }, row, M.range());
-
-    return M.filter(M.identity, maybeCoords);
-  }, map, M.range());
-}
-
 function growTrees(map) {
   var map = mapSeqToVec(map);
 
-  var treeCoords = findUnitCoords(map, 'Tree');
+  var treeCoords = getUnitCoords(map, (cell) => M.getIn(cell, ['units', 'Tree']));
 
   return M.reduce((map, [i, j]) => {
     if (Math.random() > 0.5) {
@@ -139,8 +141,69 @@ function matureRoads(map, turn) {
   }, map);
 }
 
+function findRegionForVillage(map, [i, j]) {
+  var map = mapSeqToVec(map);
+
+  var color = M.getIn(map, [i, j, 'color']);
+
+  var visited = {};
+  var toVisit = [[i, j]];
+
+  while (toVisit.length > 0) {
+    var [i, j] = toVisit.pop();
+    var unVisitedSameColorNeighbors = findNeighbors(map, i, j)
+      .filter(([i, j]) => M.getIn(map, [i, j, 'color']) === color)
+      .filter((coords) => !visited[coords.join('|')]);
+
+    unVisitedSameColorNeighbors.forEach((coords) => {
+      visited[coords.join('|')] = true;
+      toVisit.push(coords);
+    });
+  }
+
+  return Object.keys(visited)
+    .map((hash) => hash.split('|'))
+    .map(([i, j]) => [parseInt(i), parseInt(j)]);
+}
+
 function addIncome(map, turn) {
-  return map;
+  var map = mapSeqToVec(map);
+
+  var villageCoords = getUnitCoords(map, (cell) => {
+    return (
+      (M.getIn(cell, ['units', 'Hovel']) ||
+        M.getIn(cell, ['units', 'Town']) ||
+        M.getIn(cell, ['units', 'Fort'])) &&
+      M.get(cell, 'color') === turn
+    );
+  });
+
+  return M.reduce((map, [i, j]) => {
+    var sum = findRegionForVillage(map, [i, j]).reduce((sum, [i, j]) => {
+      var config = M.getIn(map, [i, j, 'units']);
+      var get = (unitName) => M.get(config, unitName);
+
+      // TODO: tombstone? watchtower?
+      var amount = get('Tree')? 0
+        : get('Meadow') && M.get(get('Meadow'), 'cooldown') === 0 ? 2
+        : 1;
+
+      return sum + amount;
+    }, 0);
+
+    return M.updateIn(map, [i, j, 'units'], (config) => {
+      var hovel = M.get(config, 'Hovel');
+      var town = M.get(config, 'Town');
+      var fort = M.get(config, 'Fort');
+
+      var typeName = hovel ? 'Hovel' :
+        town ? 'Town':
+        fort ? 'Fort'
+        : null;
+
+      return M.updateIn(config, [typeName, 'gold'], (oldAmount) => oldAmount + sum);
+    });
+  }, map, villageCoords);
 }
 
 var App = React.createClass({
@@ -214,7 +277,7 @@ var App = React.createClass({
         <div style={consoleS}>
           {JSON.stringify(hover)}
           <pre>
-            {JSON.stringify(M.toJs(M.getIn(mapSeqToVec(state.map), hover)), null, 2)}
+            {JSON.stringify(js(M.getIn(mapSeqToVec(state.map), hover)), null, 2)}
           </pre>
         </div>
         <div className="gridWrapper" style={gridWrapper}>
