@@ -11,7 +11,7 @@ var coexistances = {
     'Meadow', 'Watchtower', 'Road', 'Tombstone'
   ],
   'Meadow': [
-    'Pesant', 'Infantry', 'Soldier', 'Knight', 'Grass', 'Tree', 'Watchtower',
+    'Pesant', 'Infantry', 'Soldier', 'Knight', 'Grass', 'Watchtower',
     'Tombstone', 'Road'
   ],
   'Road': [
@@ -20,7 +20,7 @@ var coexistances = {
   ],
   'Sea': [],
   'Tombstone': ['Grass', 'Meadow', 'Road'],
-  'Tree': ['Grass', 'Meadow'],
+  'Tree': ['Grass'],
   'Watchtower': ['Hovel', 'Town', 'Fort', 'Grass', 'Meadow', 'Road'],
 };
 

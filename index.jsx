@@ -183,7 +183,8 @@ function addIncome(map, turn) {
       var config = M.getIn(map, [i, j, 'units']);
       var get = (unitName) => M.get(config, unitName);
 
-      // TODO: tombstone? watchtower?
+      // this is only determined by the land type (sea, grass, meadow, tree)
+      // conceptually tree is a landtype
       var amount = get('Tree')? 0
         : get('Meadow') && M.get(get('Meadow'), 'cooldown') === 0 ? 2
         : 1;
