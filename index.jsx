@@ -368,6 +368,15 @@ var App = React.createClass({
       var config = M.getIn(map, [vi, vj, 'units']);
       var [type, typeName] = getMaybeVillage(map, config);
 
+      var noConflictInDest = M.every((unitName) => {
+        return coexistances[unitName].Pesant;
+      }, M.keys(M.getIn(map, [i, j, 'units'])));
+
+      if (!noConflictInDest) {
+        this.setState(cancelState);
+        return;
+      }
+
       map = M.updateIn(map, [vi, vj, 'units', typeName, 'gold'], (oldAmount) => {
         return oldAmount - 10;
       });
@@ -422,6 +431,18 @@ var App = React.createClass({
           </Menu>
         );
       } else if (type2) {
+        // pesant 10g
+        // infantry 20
+        // soldier 30
+        // knight 40
+
+        // hovel: train pesant, train infantry (overtaken by enemy soldier)
+
+        // town: train pesant, train infantry, train soldier, build towers
+        //   (overtaken by enemy soldier)
+
+        // fort: train pesant, train infantry, train soldier, train knight,
+        //   build towers (overtaken by knight)
         var gold = M.getIn(config, [typeName2, 'gold']);
         var maybeTrain;
         // pesant costs 10
