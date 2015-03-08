@@ -1,17 +1,11 @@
 var React = require('react');
-var url = require('./utils/imgUrl');
+var url = require('../utils/imgUrl');
 var assign = require('object-assign');
-var assetDims = require('./assetDims');
-var positioner = require('./map/positioner');
-var everyUnit = require('./everyUnit');
+var assetDims = require('../assetDims');
+var positioner = require('../map/positioner');
+var everyUnit = require('../everyUnit');
 
-var unitComponents = {};
-
-Object.keys(everyUnit.nameInDisplayOrder).forEach((unitName) => {
-  unitComponents[unitName] = createComponent(unitName);
-});
-
-function createComponent(unitName) {
+function createUnit(unitName) {
   return React.createClass({
     displayName: unitName,
 
@@ -44,4 +38,4 @@ function createComponent(unitName) {
   });
 }
 
-module.exports = unitComponents;
+module.exports = createUnit;
