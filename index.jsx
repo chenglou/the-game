@@ -51,13 +51,13 @@ function getMaybeVillage(map, config) {
 }
 
 function getMaybeVillager(map, config) {
-  var pesant = M.get(config, 'Pesant');
+  var peasant = M.get(config, 'Peasant');
   var infantry = M.get(config, 'Infantry');
   var soldier = M.get(config, 'Soldier');
   var knight = M.get(config, 'Knight');
 
-  var type = pesant || infantry || soldier || knight;
-  var typeName = pesant ? 'Pesant'
+  var type = peasant || infantry || soldier || knight;
+  var typeName = peasant ? 'Peasant'
     : infantry ? 'Infantry'
     : soldier ? 'Soldier'
     : knight ? 'Knight'
@@ -202,7 +202,7 @@ function payTime(map, turn) {
       var config = M.getIn(map, [i, j, 'units']);
       var [type, typeName] = getMaybeVillager(map, config);
 
-      var amount = typeName === 'Pesant' ? 2
+      var amount = typeName === 'Peasant' ? 2
         : typeName === 'Infantry' ? 6
         : typeName === 'Soldier' ? 18
         : typeName === 'Knight' ? 54
@@ -268,6 +268,8 @@ function payOrDie(map, turn) {
   map = payTime(map, turn);
   return dieTime(map, turn);
 }
+
+// -------------------------- phases over
 
 var cancelState = {
   selectedCoords: null,
@@ -369,7 +371,7 @@ var App = React.createClass({
       var [type, typeName] = getMaybeVillage(map, config);
 
       var noConflictInDest = M.every((unitName) => {
-        return coexistances[unitName].Pesant;
+        return coexistances[unitName].Peasant;
       }, M.keys(M.getIn(map, [i, j, 'units'])));
 
       if (!noConflictInDest) {
@@ -381,7 +383,7 @@ var App = React.createClass({
         return oldAmount - 10;
       });
 
-      map = M.assocIn(map, [i, j, 'units', 'Pesant'], M.hashMap());
+      map = M.assocIn(map, [i, j, 'units', 'Peasant'], M.hashMap());
       this.setState({
         ...cancelState,
         map: map,
@@ -431,21 +433,21 @@ var App = React.createClass({
           </Menu>
         );
       } else if (type2) {
-        // pesant 10g
+        // peasant 10g
         // infantry 20
         // soldier 30
         // knight 40
 
-        // hovel: train pesant, train infantry (overtaken by enemy soldier)
+        // hovel: train peasant, train infantry (overtaken by enemy soldier)
 
-        // town: train pesant, train infantry, train soldier, build towers
+        // town: train peasant, train infantry, train soldier, build towers
         //   (overtaken by enemy soldier)
 
-        // fort: train pesant, train infantry, train soldier, train knight,
+        // fort: train peasant, train infantry, train soldier, train knight,
         //   build towers (overtaken by knight)
         var gold = M.getIn(config, [typeName2, 'gold']);
         var maybeTrain;
-        // pesant costs 10
+        // peasant costs 10
         if (gold >= 10) {
           maybeTrain = (
             <div onClick={this.handleMenuItemClick.bind(null, 'newVillager')}>

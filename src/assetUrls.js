@@ -5,7 +5,7 @@ var assetUrls = {
   Infantry: require('./useful/Infantry.png'),
   Knight: require('./useful/Knight.png'),
   Meadow: require('./useful/Meadow.png'),
-  Pesant: require('./useful/Pesant.png'),
+  Peasant: require('./useful/Peasant.png'),
   Road: require('./useful/Road.png'),
   Sea: require('./useful/Sea.png'),
   Soldier: require('./useful/Soldier.png'),

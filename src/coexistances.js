@@ -3,21 +3,21 @@ var coexistances = {
   'Town': ['Grass', 'Watchtower'],
   'Fort': ['Grass', 'Watchtower'],
 
-  'Pesant': ['Grass', 'Meadow', 'Road'],
+  'Peasant': ['Grass', 'Meadow', 'Road'],
   'Infantry': ['Grass', 'Meadow', 'Road'],
   'Soldier': ['Grass', 'Meadow', 'Road'],
   'Knight': ['Grass', 'Meadow', 'Road'],
 
   'Grass': [
-    'Hovel', 'Town', 'Fort', 'Pesant', 'Infantry', 'Soldier', 'Knight', 'Tree',
+    'Hovel', 'Town', 'Fort', 'Peasant', 'Infantry', 'Soldier', 'Knight', 'Tree',
     'Meadow', 'Watchtower', 'Road', 'Tombstone'
   ],
   'Meadow': [
-    'Pesant', 'Infantry', 'Soldier', 'Knight', 'Grass', 'Watchtower',
+    'Peasant', 'Infantry', 'Soldier', 'Knight', 'Grass', 'Watchtower',
     'Tombstone', 'Road'
   ],
   'Road': [
-    'Pesant', 'Infantry', 'Soldier', 'Knight', 'Grass', 'Watchtower',
+    'Peasant', 'Infantry', 'Soldier', 'Knight', 'Grass', 'Watchtower',
     'Tombstone', 'Meadow'
   ],
   'Sea': [],

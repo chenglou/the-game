@@ -1,13 +1,13 @@
 var React = require('react');
 var UnitWrapper = require('./UnitWrapper');
 
-var Pesant = React.createClass({
+var Peasant = React.createClass({
   render: function() {
     return (
-      <UnitWrapper unitName="Pesant">
+      <UnitWrapper unitName="Peasant">
       </UnitWrapper>
     );
   }
 });
 
-module.exports = Pesant;
+module.exports = Peasant;

@@ -3,7 +3,7 @@ var everyUnitComp = {
   Town: require('./units/Town'),
   Fort: require('./units/Fort'),
 
-  Pesant: require('./units/Pesant'),
+  Peasant: require('./units/Peasant'),
   Infantry: require('./units/Infantry'),
   Soldier: require('./units/Soldier'),
   Knight: require('./units/Knight'),
@@ -34,7 +34,7 @@ var everyUnitNameInDisplayOrder = {
 
   'Watchtower': 6,
 
-  'Pesant': 7,
+  'Peasant': 7,
   'Infantry': 7,
   'Soldier': 7,
   'Knight': 7,
