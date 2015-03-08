@@ -269,6 +269,11 @@ function payOrDie(map, turn) {
   return dieTime(map, turn);
 }
 
+var cancelState = {
+  selectedCoords: null,
+  pendingAction: null,
+};
+
 var App = React.createClass({
   getInitialState: function() {
     return {
@@ -277,8 +282,7 @@ var App = React.createClass({
       turn: 'Red',
       phase: 'initGame',
       selectedCoords: null,
-      destCoords: null,
-      waitDestCoords: false,
+      pendingAction: null,
     };
   },
 
@@ -286,15 +290,13 @@ var App = React.createClass({
     window.addEventListener('keydown', (e) => {
       // escape
       if (e.which === 27) {
-        this.setState({
-          selectedCoords: null,
-        });
+        this.setState(cancelState);
       }
     });
 
     setTimeout(() => {
       this.setState({
-        map: setInitialVillagesGold(this.state.map, 7),
+        map: setInitialVillagesGold(this.state.map, 70),
         phase: 'treeGrowth',
       });
     }, 100);
@@ -335,24 +337,50 @@ var App = React.createClass({
     }, 1600);
   },
 
-  handleMenuItemClick: function() {
+  handleMenuItemClick: function(action) {
     this.setState({
-      waitDestCoords: true,
+      pendingAction: action,
     });
   },
 
   handleTileMouseDown: function(i, j) {
-    if (this.state.waitDestCoords) {
-      var coords = findRegion(map, [i, j]);
-      this.setState({
-        destCoords: [i, j],
-        // waitDestCoords: false,
-      });
-    } else {
+    var {map, pendingAction} = this.state;
+
+    if (!pendingAction) {
       this.setState({
         selectedCoords: [i, j],
       });
+      return;
     }
+
+    var {selectedCoords: [vi, vj]} = this.state;
+    var coords = findRegion(map, [vi, vj]);
+    var clickedInRegion = coords.some(([i2, j2]) => i === i2 && j === j2);
+
+    if (!clickedInRegion) {
+      this.setState(cancelState);
+      return;
+    }
+
+    if (pendingAction === 'newVillager') {
+      // assume `selectedCoords` to be village coordinates
+      // assume enough gold (otherwise menu item disabled in render)
+      var config = M.getIn(map, [vi, vj, 'units']);
+      var [type, typeName] = getMaybeVillage(map, config);
+
+      map = M.updateIn(map, [vi, vj, 'units', typeName, 'gold'], (oldAmount) => {
+        return oldAmount - 10;
+      });
+
+      map = M.assocIn(map, [i, j, 'units', 'Pesant'], M.hashMap());
+      this.setState({
+        ...cancelState,
+        map: map,
+      });
+      return;
+    }
+
+    throw 'umimplemented ' + pendingAction;
   },
 
   handleTileHover: function(i, j) {
@@ -394,11 +422,25 @@ var App = React.createClass({
           </Menu>
         );
       } else if (type2) {
-        maybeMenu = (
-          <Menu pos={[x, y]}>
-            <div onClick={this.handleMenuItemClick}>
+        var gold = M.getIn(config, [typeName2, 'gold']);
+        var maybeTrain;
+        // pesant costs 10
+        if (gold >= 10) {
+          maybeTrain = (
+            <div onClick={this.handleMenuItemClick.bind(null, 'newVillager')}>
               Train new villager
             </div>
+          );
+        } else {
+          maybeTrain = (
+            <div>
+              Train new villager (not enough gold)
+            </div>
+          );
+        }
+        maybeMenu = (
+          <Menu pos={[x, y]}>
+            {maybeTrain}
           </Menu>
         );
       }
