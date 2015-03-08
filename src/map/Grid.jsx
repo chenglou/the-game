@@ -103,6 +103,7 @@ var Grid = React.createClass({
         <div style={tilesS}>
           {js(tiles)}
         </div>
+        {props.children}
       </div>
     );
   }
