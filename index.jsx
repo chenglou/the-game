@@ -273,6 +273,7 @@ var App = React.createClass({
       hover: [0, 0],
       map: M.toClj(map1),
       turn: 'Red',
+      phase: 'initGame',
     };
   },
 
@@ -280,36 +281,42 @@ var App = React.createClass({
     setTimeout(() => {
       this.setState({
         map: setInitialVillagesGold(this.state.map, 7),
+        phase: 'treeGrowth',
       });
     }, 100);
 
     setTimeout(() => {
       this.setState({
         map: growTrees(this.state.map),
+        phase: 'tombstone',
       });
     }, 500);
 
     setTimeout(() => {
       this.setState({
         map: tombstonesToTrees(this.state.map, this.state.turn),
+        phase: 'build',
       });
     }, 1000);
 
     setTimeout(() => {
       this.setState({
         map: matureTiles(this.state.map, this.state.turn),
+        phase: 'income',
       });
     }, 1100);
 
     setTimeout(() => {
       this.setState({
         map: addIncome(this.state.map, this.state.turn),
+        phase: 'payment',
       });
     }, 1300);
 
     setTimeout(() => {
       this.setState({
         map: payOrDie(this.state.map, this.state.turn),
+        phase: 'moveAndPurchase',
       });
     }, 1600);
   },
@@ -342,6 +349,7 @@ var App = React.createClass({
     return (
       <div>
         <div style={consoleS}>
+          <div>{state.phase} phase</div>
           {JSON.stringify(hover)}
           <pre>
             {JSON.stringify(js(M.getIn(mapSeqToVec(state.map), hover)), null, 2)}
@@ -349,6 +357,7 @@ var App = React.createClass({
         </div>
         <div className="gridWrapper" style={gridWrapper}>
           <Grid
+            active={hover}
             tileConfigs={state.map}
             tileMouseDown={this.handleTileMouseDown}
             tileHover={this.handleTileHover} />

@@ -7,20 +7,37 @@ var everyUnit = require('../everyUnit');
 var unitFactory = require('../units/unitFactory');
 var overlayBlue = require('../overlayBlue.png');
 var overlayRed = require('../overlayRed.png');
+var overlayActive = require('../overlayActive.png');
 var assetDims = require('../assetDims');
 var url = require('../utils/imgUrl');
 
 var p = React.PropTypes;
+var js = M.toJs;
 
 function orderUnitsForDisplay(unitNames) {
   var nameInDisplayOrder = everyUnit.nameInDisplayOrder;
   return M.sort((a, b) => nameInDisplayOrder[a] - nameInDisplayOrder[b], unitNames);
 }
 
+function getOverlayStyle(bg, active) {
+  var [w, h] = assetDims.misc.overlay;
+
+  return {
+    backgroundImage: bg,
+    backgroundRepeat: 'no-repeat',
+    opacity: active ? 1 : 0.5,
+    top: -4,
+    zIndex: active ? 100 : 99,
+    width: w,
+    height: h,
+    marginLeft: (positioner.calcW() - w) / 2,
+  };
+}
+
 var Grid = React.createClass({
   propTypes: {
     // tileConfigs: p.arrayOf(p.array.isRequired).isRequired,
-    unitConfigs: p.arrayOf(p.array.isRequired),
+    active: p.array.isRequired,
     tileMouseDown: p.func.isRequired,
     tileHover: p.func.isRequired,
   },
@@ -36,9 +53,6 @@ var Grid = React.createClass({
       width: 9999,
     };
 
-    var overlayW = assetDims.misc.overlay[0];
-    var overlayH = assetDims.misc.overlay[1];
-
     var tiles = M.map((row, i) => {
       var cells = M.map((cell, j) => {
         var units = M.get(cell, 'units');
@@ -49,7 +63,7 @@ var Grid = React.createClass({
           var config = M.get(units, unitName);
 
           return (
-            <Unit key={unitName} config={M.toJs(config)}></Unit>
+            <Unit key={unitName} config={js(config)}></Unit>
           );
         }, orderedUnits);
 
@@ -58,16 +72,11 @@ var Grid = React.createClass({
           : color === 'Red' ? url(overlayRed)
           : 'none';
 
-        var overlayS = {
-          backgroundImage: overlay,
-          backgroundRepeat: 'no-repeat',
-          opacity: 0.5,
-          top: -4,
-          zIndex: 99,
-          width: overlayW,
-          height: overlayH,
-          marginLeft: (positioner.calcW() - overlayW) / 2,
-        };
+        var maybeActiveOverlay;
+        if (props && i === props.active[0] && j === props.active[1]) {
+          maybeActiveOverlay =
+            <div style={getOverlayStyle(url(overlayActive), true)}></div>;
+        }
 
         return (
           <Tile
@@ -76,13 +85,14 @@ var Grid = React.createClass({
             pos={[i, j]}
             onMouseDown={props.tileMouseDown.bind(null, i, j)}
             onMouseEnter={props.tileHover.bind(null, i, j)}>
-              {M.toJs(unitComponents)}
-              <div style={overlayS}></div>
+              {js(unitComponents)}
+              <div style={getOverlayStyle(overlay, false)}></div>
+              {maybeActiveOverlay}
           </Tile>
         );
       }, row, M.range());
 
-      return <div key={i} style={rowS}>{M.toJs(cells)}</div>;
+      return <div key={i} style={rowS}>{js(cells)}</div>;
     }, tileConfigs, M.range());
 
     var s = {
@@ -94,7 +104,7 @@ var Grid = React.createClass({
     return (
       <div style={s}>
         <div style={tilesS}>
-          {M.toJs(tiles)}
+          {js(tiles)}
         </div>
       </div>
     );

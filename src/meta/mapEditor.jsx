@@ -189,6 +189,7 @@ var Editor = React.createClass({
   render: function() {
     var state = this.state;
     var tiles = state.tiles;
+    var hover = state.hover;
 
     var w = M.count(M.first(tiles));
     var h = M.count(tiles);
@@ -236,7 +237,7 @@ var Editor = React.createClass({
           <span>{h}</span>
           <div>Tile count: {w * h}</div>
           <div>
-            {state.hover[0]}, {state.hover[1]}
+            {hover[0]}, {hover[1]}
           </div>
 
           Units:
@@ -279,6 +280,7 @@ var Editor = React.createClass({
             onMouseDown={this.handleMouseDown}
             onMouseUp={this.handleMouseUp}>
             <Grid
+              active={hover}
               tileConfigs={state.tiles}
               tileMouseDown={this.handleTileMouseDown}
               tileHover={this.handleTileHover} />
