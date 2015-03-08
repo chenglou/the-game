@@ -14,7 +14,7 @@ module.exports = {
   plugins: [commonsPlugin],
   module: {
     loaders: [
-      {test: /\.jsx?$/, exclude: /node_modules/, loader: 'babel-loader'},
+      {test: /\.jsx?$/, exclude: /node_modules/, loader: 'babel-loader?experimental'},
       {test: /\.(png|jpg)$/, exclude: /node_modules/, loader: 'url-loader?limit=1'},
     ]
   },
