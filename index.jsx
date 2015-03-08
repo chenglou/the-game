@@ -1,11 +1,13 @@
 var React = require('react');
 var Grid = require('./src/map/Grid');
+var Menu = require('./src/Menu');
 var M = require('mori');
 var coexistances = require('./src/coexistances');
 var dissocIn = require('./src/utils/dissocIn');
 var randNth = require('./src/utils/randNth');
 var findNeighbors = require('./src/findNeighbors');
 var mapSeqToVec = require('./src/mapSeqToVec');
+var positioner = require('./src/map/positioner');
 
 var map1 = require('./src/map/data/map1');
 
@@ -132,7 +134,7 @@ function matureBuilt(map, turn, unitName) {
   });
 }
 
-function findRegionForVillage(map, [i, j]) {
+function findRegion(map, [i, j]) {
   var map = mapSeqToVec(map);
 
   var color = M.getIn(map, [i, j, 'color']);
@@ -166,7 +168,7 @@ function addIncome(map, turn) {
   });
 
   return M.reduce((map, [i, j]) => {
-    var sum = findRegionForVillage(map, [i, j]).reduce((sum, [i, j]) => {
+    var sum = findRegion(map, [i, j]).reduce((sum, [i, j]) => {
       var config = M.getIn(map, [i, j, 'units']);
       var get = (unitName) => M.get(config, unitName);
 
@@ -196,7 +198,7 @@ function payTime(map, turn) {
   });
 
   return M.reduce((map, [i, j]) => {
-    var sum = findRegionForVillage(map, [i, j]).reduce((sum, [i, j]) => {
+    var sum = findRegion(map, [i, j]).reduce((sum, [i, j]) => {
       var config = M.getIn(map, [i, j, 'units']);
       var [type, typeName] = getMaybeVillager(map, config);
 
@@ -239,7 +241,7 @@ function dieTime(map, turn) {
     map = M.assocIn(map, [i, j, 'units', typeName, 'gold'], 0);
 
     // turn units into tombstones
-    var units = findRegionForVillage(map, [i, j]).filter(([i, j]) => {
+    var units = findRegion(map, [i, j]).filter(([i, j]) => {
       var config = M.getIn(map, [i, j, 'units']);
 
       var [type, typeName] = getMaybeVillager(map, config);
@@ -274,10 +276,22 @@ var App = React.createClass({
       map: M.toClj(map1),
       turn: 'Red',
       phase: 'initGame',
+      selectedCoords: null,
+      destCoords: null,
+      waitDestCoords: false,
     };
   },
 
   componentDidMount: function() {
+    window.addEventListener('keydown', (e) => {
+      // escape
+      if (e.which === 27) {
+        this.setState({
+          selectedCoords: null,
+        });
+      }
+    });
+
     setTimeout(() => {
       this.setState({
         map: setInitialVillagesGold(this.state.map, 7),
@@ -321,8 +335,24 @@ var App = React.createClass({
     }, 1600);
   },
 
+  handleMenuItemClick: function() {
+    this.setState({
+      waitDestCoords: true,
+    });
+  },
+
   handleTileMouseDown: function(i, j) {
-    //
+    if (this.state.waitDestCoords) {
+      var coords = findRegion(map, [i, j]);
+      this.setState({
+        destCoords: [i, j],
+        // waitDestCoords: false,
+      });
+    } else {
+      this.setState({
+        selectedCoords: [i, j],
+      });
+    }
   },
 
   handleTileHover: function(i, j) {
@@ -333,7 +363,7 @@ var App = React.createClass({
 
   render: function() {
     var state = this.state;
-    var hover = state.hover;
+    var {hover, selectedCoords, map} = state;
 
     var gridWrapper = {
       border: '1px solid black',
@@ -346,21 +376,51 @@ var App = React.createClass({
       height: 100,
     };
 
+    var maybeMenu;
+
+    if (selectedCoords) {
+      let [i, j] = selectedCoords;
+      var config = M.getIn(map, [i, j, 'units']);
+      var [type, typeName] = getMaybeVillager(map, config);
+      var [type2, typeName2] = getMaybeVillage(map, config);
+
+      let x = positioner.calcLeft(j, i);
+      let y = positioner.calcTop(i);
+
+      if (type) {
+        maybeMenu = (
+          <Menu items={[1,2,3]} pos={[x, y]}>
+            asd
+          </Menu>
+        );
+      } else if (type2) {
+        maybeMenu = (
+          <Menu pos={[x, y]}>
+            <div onClick={this.handleMenuItemClick}>
+              Train new villager
+            </div>
+          </Menu>
+        );
+      }
+    }
+
     return (
       <div>
         <div style={consoleS}>
           <div>{state.phase} phase</div>
           {JSON.stringify(hover)}
           <pre>
-            {JSON.stringify(js(M.getIn(mapSeqToVec(state.map), hover)), null, 2)}
+            {JSON.stringify(js(M.getIn(mapSeqToVec(map), hover)), null, 2)}
           </pre>
         </div>
         <div className="gridWrapper" style={gridWrapper}>
           <Grid
             active={hover}
-            tileConfigs={state.map}
+            tileConfigs={map}
             tileMouseDown={this.handleTileMouseDown}
-            tileHover={this.handleTileHover} />
+            tileHover={this.handleTileHover}>
+              {maybeMenu}
+          </Grid>
         </div>
       </div>
     );

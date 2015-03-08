@@ -1,18 +1,20 @@
-var everyUnitImg = {
-  Fort: require('./useful/Fort.png'),
-  Grass: require('./useful/Grass.png'),
-  Hovel: require('./useful/Hovel.png'),
-  Infantry: require('./useful/Infantry.png'),
-  Knight: require('./useful/Knight.png'),
-  Meadow: require('./useful/Meadow.png'),
-  Pesant: require('./useful/Pesant.png'),
-  Road: require('./useful/Road.png'),
-  Sea: require('./useful/Sea.png'),
-  Soldier: require('./useful/Soldier.png'),
-  Tombstone: require('./useful/Tombstone.png'),
-  Town: require('./useful/Town.png'),
-  Tree: require('./useful/Tree.png'),
-  Watchtower: require('./useful/Watchtower.png'),
+var everyUnitComp = {
+  Hovel: require('./units/Hovel'),
+  Town: require('./units/Town'),
+  Fort: require('./units/Fort'),
+
+  Pesant: require('./units/Pesant'),
+  Infantry: require('./units/Infantry'),
+  Soldier: require('./units/Soldier'),
+  Knight: require('./units/Knight'),
+
+  Grass: require('./units/Grass'),
+  Meadow: require('./units/Meadow'),
+  Road: require('./units/Road'),
+  Sea: require('./units/Sea'),
+  Tombstone: require('./units/Tombstone'),
+  Tree: require('./units/Tree'),
+  Watchtower: require('./units/Watchtower'),
 };
 
 var everyUnitNameInDisplayOrder = {
@@ -40,7 +42,7 @@ var everyUnitNameInDisplayOrder = {
 
 var everyUnit = {
   nameInDisplayOrder: everyUnitNameInDisplayOrder,
-  img: everyUnitImg,
+  comp: everyUnitComp,
 };
 
 module.exports = everyUnit;

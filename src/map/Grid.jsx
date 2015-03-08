@@ -2,9 +2,7 @@ var React = require('react');
 var positioner = require('./positioner');
 var Tile = require('../Tile');
 var M = require('mori');
-var assign = require('object-assign');
 var everyUnit = require('../everyUnit');
-var unitFactory = require('../units/unitFactory');
 var overlayBlue = require('../overlayBlue.png');
 var overlayRed = require('../overlayRed.png');
 var overlayActive = require('../overlayActive.png');
@@ -59,11 +57,11 @@ var Grid = React.createClass({
         var orderedUnits = orderUnitsForDisplay(M.keys(units));
 
         var unitComponents = M.map((unitName) => {
-          var Unit = unitFactory[unitName];
+          var Unit = everyUnit.comp[unitName];
           var config = M.get(units, unitName);
 
           return (
-            <Unit key={unitName} config={js(config)}></Unit>
+            <Unit key={unitName} {...js(config)}></Unit>
           );
         }, orderedUnits);
 
@@ -81,7 +79,6 @@ var Grid = React.createClass({
         return (
           <Tile
             key={j}
-            diagLength={25}
             pos={[i, j]}
             onMouseDown={props.tileMouseDown.bind(null, i, j)}
             onMouseEnter={props.tileHover.bind(null, i, j)}>
