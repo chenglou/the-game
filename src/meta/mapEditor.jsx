@@ -3,17 +3,15 @@ var Grid = require('../map/Grid');
 var positioner = require('../map/positioner');
 var React = require('react');
 var url = require('../utils/imgUrl');
+var butLast = require('../utils/butLast');
 var coexistances = require('../coexistances');
 var mapSeqToVec = require('../mapSeqToVec');
 
 var assetDims = require('../assetDims');
 var everyUnit = require('../everyUnit');
+var assetUrls = require('../assetUrls');
 
 var p = React.PropTypes;
-
-function butLast(coll) {
-  return M.map(M.identity, coll, M.rest(coll));
-}
 
 function surroundWithSea(map) {
   var seaTileConfig = M.toClj({
@@ -68,7 +66,7 @@ var LandBox = React.createClass({
 
     return (
       <div {...props} style={s}>
-        <img src={'./out/' + everyUnit.img[unit]} style={imgS} />
+        <img src={'./out/' + assetUrls[unit]} style={imgS} />
         <div style={labelS}>
           {unit}
         </div>
