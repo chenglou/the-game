@@ -13,6 +13,7 @@ var everyUnit = require('./src/everyUnit');
 var map1 = require('./src/map/data/map1');
 
 var js = M.toJs;
+var clj = M.toClj;
 
 // handy, see usage
 function add(x) {
@@ -120,7 +121,7 @@ function growTrees(map) {
 
     var [i2, j2] = randNth(emptyNeighbors);
     return M.updateIn(map, [i2, j2, 'units'], (config) => {
-      return M.assoc(config, 'Tree', M.hashMap());
+      return M.assoc(config, 'Tree', clj(everyUnit.defaultConfig.Tree));
     });
   }, map, treeCoords);
 }
@@ -131,7 +132,7 @@ function tombstonesToTrees(map, turn) {
   });
   return updateMap(map, tombstoneCoords, (cell) => {
     cell = dissocIn(cell, ['units', 'Tombstone']);
-    return M.assocIn(cell, ['units', 'Tree'], M.hashMap());
+    return M.assocIn(cell, ['units', 'Tree'], clj(everyUnit.defaultConfig.Tree));
   });
 }
 
@@ -268,7 +269,11 @@ function dieTime(map, turn) {
       var [type, typeName] = getMaybeVillager(map, i, j);
 
       map = dissocIn(map, [i, j, 'units', typeName]);
-      return M.assocIn(map, [i, j, 'units', 'Tombstone'], M.hashMap());
+      return M.assocIn(
+        map,
+        [i, j, 'units', 'Tombstone'],
+        clj(everyUnit.defaultConfig.Tombstone)
+      );
     }, map);
   }, map, villageCoords);
 }
@@ -386,10 +391,7 @@ function newVillager(map, destCoords, villageCoords, unitName, gold) {
   var clickedInRegion = findRegion(map, vi, vj)
     .some(([i2, j2]) => di === i2 && dj === j2);
 
-  if (!clickedInRegion) {
-    return map;
-  }
-  if (!canCoexist(map, unitName, di, dj)) {
+  if (!clickedInRegion || !canCoexist(map, unitName, di, dj)) {
     return map;
   }
 
@@ -397,7 +399,11 @@ function newVillager(map, destCoords, villageCoords, unitName, gold) {
 
   map = M.updateIn(map, [vi, vj, 'units', typeName, 'gold'], add(-gold));
 
-  return M.assocIn(map, [di, dj, 'units', unitName], M.hashMap());
+  return M.assocIn(
+    map,
+    [di, dj, 'units', unitName],
+    clj(everyUnit.defaultConfig[unitName])
+  );
 }
 
 function findVillageInRegion(map, region) {
@@ -467,7 +473,7 @@ function move(map, [di, dj], [ui, uj]) {
 
     // will kill dupe villages
     var villageToRegionSizeM = M.zipmap(
-      M.toClj(regions.map(region => findVillageInRegion(map, region))),
+      clj(regions.map(region => findVillageInRegion(map, region))),
       regions.map(region => region.length)
     );
 
@@ -532,7 +538,7 @@ var App = React.createClass({
   getInitialState: function() {
     return {
       hover: [0, 0],
-      map: M.toClj(map1),
+      map: clj(map1),
       turn: 'Red',
       phase: 'initGame',
       selectedCoords: null,
@@ -549,12 +555,12 @@ var App = React.createClass({
       }
     });
 
-    // setTimeout(() => {
-    //   this.setState({
-    //     map: setInitialVillagesGold(this.state.map, 70),
-    //     phase: 'treeGrowth',
-    //   });
-    // }, 100);
+    setTimeout(() => {
+      this.setState({
+        map: setInitialVillagesGold(this.state.map, 70),
+        phase: 'treeGrowth',
+      });
+    }, 100);
 
     setTimeout(() => {
       this.setState({
@@ -642,7 +648,10 @@ var App = React.createClass({
         map: newVillager(map, [i, j], selectedCoords, 'Knight', 40),
       });
     } else if (pendingAction === 'upgradeToTown') {
-      //
+      this.setState({
+        ...cancelPendingActionState,
+        map: newVillager(map, [i, j], selectedCoords, 'Knight', 40),
+      });
     } else if (pendingAction === 'upgradeToFort') {
       //
     } else if (pendingAction === 'move') {
