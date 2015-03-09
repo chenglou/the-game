@@ -8,6 +8,7 @@ var randNth = require('./src/utils/randNth');
 var findNeighbors = require('./src/findNeighbors');
 var mapSeqToVec = require('./src/mapSeqToVec');
 var positioner = require('./src/map/positioner');
+var everyUnit = require('./src/everyUnit');
 
 var map1 = require('./src/map/data/map1');
 
@@ -38,6 +39,14 @@ function updateMap(map, coordsList, f) {
   return M.reduce((map, coords) => {
     return M.updateIn(map, coords, (cell) => f(cell, ...coords));
   }, map, coordsList);
+}
+
+function hashCoords([i, j]) {
+  return i + '|' + j;
+}
+
+function unhashCoords(coords) {
+  return coords.split('|').map(n => parseInt(n));
 }
 
 function getMaybeVillage(map, i, j) {
@@ -122,6 +131,16 @@ function tombstonesToTrees(map, turn) {
   });
 }
 
+function resetUnitMoves(map, turn) {
+  var unitCoords = filterMapByColor(map, turn, (cell, i, j) => {
+    return getMaybeVillager(map, i, j)[0];
+  });
+  return updateMap(map, unitCoords, (cell, i, j) => {
+    var [type, typeName] = getMaybeVillager(map, i, j);
+    return M.assocIn(cell, ['units', typeName, 'hasMoved'], false);
+  });
+}
+
 function matureTiles(map, turn) {
   map = matureBuilt(map, turn, 'Meadow');
   return matureBuilt(map, turn, 'Road');
@@ -150,17 +169,15 @@ function findRegion(map, i, j) {
     var [i, j] = toVisit.pop();
     var unVisitedSameColorNeighbors = findNeighbors(map, i, j)
       .filter(([i, j]) => M.getIn(map, [i, j, 'color']) === color)
-      .filter((coords) => !visited[coords.join('|')]);
+      .filter(coords => !visited[hashCoords(coords)]);
 
-    unVisitedSameColorNeighbors.forEach((coords) => {
-      visited[coords.join('|')] = true;
+    unVisitedSameColorNeighbors.forEach(coords => {
+      visited[hashCoords(coords)] = true;
       toVisit.push(coords);
     });
   }
 
-  return Object.keys(visited)
-    .map((hash) => hash.split('|'))
-    .map(([i, j]) => [parseInt(i), parseInt(j)]);
+  return Object.keys(visited).map(unhashCoords);
 }
 
 // region + outer ring (explore outside land)
@@ -310,9 +327,6 @@ function getMenuItemsForVillage(typeName, gold, wood, cb) {
     ];
   }
 
-  // hovel: overtaken by enemy soldier
-  // town: overtaken by enemy soldier
-  // fort: overtaken by knight
   return items.map(([desc, action, goldReq, woodReq]) => {
     if (gold >= goldReq && wood >= woodReq) {
       return (
@@ -330,7 +344,21 @@ function getMenuItemsForVillage(typeName, gold, wood, cb) {
   });
 }
 
-function getMenuItemsForVillager(typeName, cb) {
+function getMenuItemsForVillager(typeName, {hasMoved, cooldown}, cb) {
+  if (hasMoved) {
+    return [
+      <MenuItem key="hasMoved" disabled={true}>
+        Already Moved
+      </MenuItem>
+    ];
+  }
+  if (cooldown > 0) {
+    return [
+      <MenuItem key="cooldown" disabled={true}>
+        Cooldown ({cooldown})
+      </MenuItem>
+    ];
+  }
   var items;
   if (typeName === 'Peasant') {
     items = [
@@ -397,58 +425,143 @@ function newVillager(map, destCoords, villageCoords, unitName, gold) {
   return M.assocIn(map, [di, dj, 'units', unitName], M.hashMap());
 }
 
-function gatherWood(map, destCoords, unitCoords) {
-  var [di, dj] = destCoords;
-  var [ui, uj] = unitCoords;
-
-  // TODO: peasant can't go on neighbor enemy tiles
-  var canMoveToDest = findNeighbors(map, ui, uj).some(([i, j]) => {
-    return i === di && j === dj;
-  });
-
-  if (!canMoveToDest) {
-    return map;
-  }
-
-  var [vi, vj] = findRegion(map, ui, uj).filter(([i, j]) => {
-    // TODO refactor getMaybeVillage(r), type never used
-    return getMaybeVillage(map, i, j)[0];
-  })[0];
-
-  var [type, typeName] = getMaybeVillage(map, vi, vj);
-
-  map = M.updateIn(map, [vi, vj, 'units', typeName, 'wood'], (oldAmount) => {
-    return (oldAmount || 0) + 1;
-  });
-  // TODO: is there a tree?
-  map = dissocIn(map, [di, dj, 'units', 'Tree']);
-
-  var [type2, typeName2] = getMaybeVillager(map, ui, uj);
-
-  map = dissocIn(map, [ui, uj, 'units', typeName2]);
-  return M.assocIn(map, [di, dj, 'units', typeName2], type2);
-}
-
 function move(map, destCoords, unitCoords) {
   var [di, dj] = destCoords;
   var [ui, uj] = unitCoords;
 
-  // TODO: peasant can't go on neighbor enemy tiles
-  var canMoveToDest = findNeighbors(map, ui, uj).some(([i, j]) => {
-    return i === di && j === dj;
-  });
+  var [type, typeName] = getMaybeVillager(map, ui, uj);
+  var destConfig = M.getIn(map, [di, dj]);
+  var destColor = M.get(destConfig, 'color');
+  var ownColor = M.getIn(map, [ui, uj, 'color']);
 
-  if (!canMoveToDest) {
+  var isEnemyColor = destColor !== 'Gray' && destColor !== ownColor;
+
+  // peasant can't go on neighbor enemy tiles
+  if (typeName === 'Peasant' && isEnemyColor) {
     return map;
   }
 
-  var [type, typeName] = getMaybeVillager(map, ui, uj);
+  var hasTree = M.getIn(destConfig, ['units', 'Tree']);
+  var hasTombstone = M.getIn(destConfig, ['units', 'Tombstone']);
 
+  // only knight can't gather wood & clear tombstone
+  if (typeName === 'Knight' && (hasTree || hasTombstone)) {
+    return map;
+  }
+
+  var movingToNeighbor = findNeighbors(map, ui, uj).some(([i, j]) => {
+    return i === di && j === dj;
+  });
+  if (!movingToNeighbor) {
+    return map;
+  }
+
+  // TODO: stop unit from moving again
+  map = dissocIn(map, [di, dj, 'units', 'Tombstone']);
+
+  if (hasTree) {
+    map = dissocIn(map, [di, dj, 'units', 'Tree']);
+
+    let [vi, vj] = findRegion(map, ui, uj).filter(([i, j]) => {
+      return getMaybeVillage(map, i, j)[0];
+    })[0];
+    let [type, typeName] = getMaybeVillage(map, vi, vj);
+
+    map = M.updateIn(map, [vi, vj, 'units', typeName, 'wood'], (oldAmount) => {
+      return (oldAmount || 0) + 1;
+    });
+  }
+
+  // check if unit can coexist on dest tile. this must be done after removing
+  // tombstone and tree
+  var canCoexist = M.every((potentialConflictName) => {
+    return coexistances[potentialConflictName][typeName];
+  }, M.keys(M.getIn(map, [di, dj, 'units'])));
+  if (!canCoexist) {
+    return map;
+  }
+
+  // at this point we don't have any more early return (aka invalid move). we
+  // can safely mark unit as having already moved below
+
+  // can't move anymore if picked tomb/tree/differently colored tile
+  if (hasTree || hasTombstone || destColor !== ownColor) {
+    map = M.assocIn(map, [ui, uj, 'units', typeName, 'hasMoved'], true);
+  }
+
+  // might be joining 2/3 same-colored regions...
+  if (destColor !== ownColor) {
+    var destSameColorNeighbors = findNeighbors(map, di, dj).filter(([i, j]) => {
+      return M.getIn(map, [i, j, 'color']) === ownColor;
+    });
+    var regions = destSameColorNeighbors.map(([i, j]) => {
+      return findRegion(map, i, j);
+    });
+    // TODO: could use a findVillageInRegion helper
+    var villages = regions.map((coordsList) => {
+      return coordsList.filter(([i, j]) => {
+        return getMaybeVillage(map, i, j)[0];
+      })[0];
+    });
+
+    var villageToRegionSize = {};
+    villages.forEach((coords, n) => {
+      villageToRegionSize[hashCoords(coords)] = regions[n].length;
+    });
+
+    var distinctVillagesHashed = Object.keys(villageToRegionSize)
+    var bestVillageHashed = distinctVillagesHashed.reduce((hash1, hash2) => {
+      // highest ranked village
+      var [i1, j1] = unhashCoords(hash1);
+      var [i2, j2] = unhashCoords(hash2);
+      var typeName1 = getMaybeVillage(map, i1, j1)[1];
+      var typeName2 = getMaybeVillage(map, i2, j2)[1];
+      var rank1 = everyUnit.rank[typeName1];
+      var rank2 = everyUnit.rank[typeName2];
+
+      if (rank1 > rank2) {
+        return hash1;
+      } else if (rank1 < rank2) {
+        return hash2;
+      }
+      // if same rank: biggest region village
+      return villageToRegionSize[hash1] > villageToRegionSize[hash2] ?
+        hash1 :
+        hash2;
+    }, distinctVillagesHashed[0]);
+
+    var [bi, bj] = unhashCoords(bestVillageHashed);
+    var bestTypeName = getMaybeVillage(map, bi, bj)[1];
+
+    distinctVillagesHashed.forEach(hash => {
+      if (hash === bestVillageHashed) {
+        return;
+      }
+      var [i, j] = unhashCoords(hash);
+      var typeName = getMaybeVillage(map, i, j)[1];
+      var gold = M.getIn(map, [i, j, 'units', typeName, 'gold']);
+      var wood = M.getIn(map, [i, j, 'units', typeName, 'wood']);
+
+      map = M.updateIn(map, [bi, bj, 'units', bestTypeName, 'gold'], oldAmount => {
+        return (oldAmount || 0) + gold;
+      });
+      map = M.updateIn(map, [bi, bj, 'units', bestTypeName, 'wood'], oldAmount => {
+        return (oldAmount || 0) + wood;
+      });
+      map = dissocIn(map, [i, j, 'units', typeName]);
+    });
+
+    // claim land, mark color
+    map = M.assocIn(map, [di, dj, 'color'], ownColor);
+  }
+
+  // finally move. nice to do at the end, otherwise [ui ji] [di dj] gets
+  // confusing halfway through
+  // can't reuse type from above. we changed the map and unit afterward (e.g.
+  // hasMoved)
+  var unit = M.getIn(map, [ui, uj, 'units', typeName]);
   map = dissocIn(map, [ui, uj, 'units', typeName]);
-  map = M.assocIn(map, [di, dj, 'units', typeName], type);
-
-  // might be neutral tile
-  return map;
+  return M.assocIn(map, [di, dj, 'units', typeName], unit);
 }
 
 // -------------------------- menu actions over
@@ -482,17 +595,25 @@ var App = React.createClass({
 
     setTimeout(() => {
       this.setState({
-        map: setInitialVillagesGold(this.state.map, 70),
+        map: setInitialVillagesGold(this.state.map, 7),
         phase: 'treeGrowth',
       });
     }, 100);
 
     setTimeout(() => {
       this.setState({
-        map: growTrees(this.state.map),
-        phase: 'tombstone',
+        map: growTrees(this.state.map, this.state.turn),
+        phase: 'resetUnitMoves',
       });
     }, 500);
+
+    // player phase specific. each player round, not each total round
+    setTimeout(() => {
+      this.setState({
+        map: resetUnitMoves(this.state.map, this.state.turn),
+        phase: 'tombstone',
+      });
+    }, 750);
 
     setTimeout(() => {
       this.setState({
@@ -615,7 +736,7 @@ var App = React.createClass({
       if (typeName) {
         maybeMenu = (
           <Menu pos={[x, y]}>
-            {getMenuItemsForVillager(typeName, this.handleMenuItemClick)}
+            {getMenuItemsForVillager(typeName, js(type), this.handleMenuItemClick)}
           </Menu>
         );
       } else if (typeName2) {
@@ -634,9 +755,7 @@ var App = React.createClass({
     return (
       <div>
         <div style={consoleS}>
-          <div>Phase: {phase}</div>
-          <div>Pending action: {pendingAction}</div>
-          {JSON.stringify(hover)}
+          <div>Phase: {phase}. Pending action: {pendingAction}</div>
           <pre>
             {JSON.stringify(js(M.getIn(mapSeqToVec(map), hover)), null, 2)}
           </pre>
