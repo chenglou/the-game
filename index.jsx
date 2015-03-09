@@ -18,7 +18,7 @@ function filterMap(map, f) {
 
   return M.mapcat((row, i) => {
     var maybeCoords = M.map((cell, j) => {
-      return f(cell) ? [i, j] : null;
+      return f(cell, i, j) ? [i, j] : null;
     }, row, M.range());
 
     return M.filter(M.identity, maybeCoords);
@@ -27,16 +27,22 @@ function filterMap(map, f) {
 
 // helper
 function filterMapByColor(map, turn, f) {
-  return filterMap(map, (cell) => M.get(cell, 'color') === turn && f(cell));
+  return filterMap(map, (cell, i, j) => {
+    return M.get(cell, 'color') === turn && f(cell, i, j);
+  });
 }
 
-function updateMap(map, coords, f) {
+function updateMap(map, coordsList, f) {
   map = mapSeqToVec(map);
 
-  return M.reduce((map, coords) => M.updateIn(map, coords, f), map, coords);
+  return M.reduce((map, coords) => {
+    return M.updateIn(map, coords, (cell) => f(cell, ...coords));
+  }, map, coordsList);
 }
 
-function getMaybeVillage(map, config) {
+function getMaybeVillage(map, i, j) {
+  var config = M.getIn(map, [i, j, 'units']);
+
   var hovel = M.get(config, 'Hovel');
   var town = M.get(config, 'Town');
   var fort = M.get(config, 'Fort');
@@ -50,7 +56,9 @@ function getMaybeVillage(map, config) {
   return [type, typeName];
 }
 
-function getMaybeVillager(map, config) {
+function getMaybeVillager(map, i, j) {
+  var config = M.getIn(map, [i, j, 'units']);
+
   var peasant = M.get(config, 'Peasant');
   var infantry = M.get(config, 'Infantry');
   var soldier = M.get(config, 'Soldier');
@@ -67,14 +75,13 @@ function getMaybeVillager(map, config) {
 }
 
 function setInitialVillagesGold(map, amount) {
-  var villageCoords = filterMap(map, (cell) => {
-    var config = M.get(cell, 'units');
-    return getMaybeVillage(map, config)[0];
+  var villageCoords = filterMap(map, (cell, i, j) => {
+    return getMaybeVillage(map, i, j)[0];
   });
 
-  return updateMap(map, villageCoords, (cell) => {
-    var config = M.get(cell, 'units');
-    var [type, typeName] = getMaybeVillage(map, config);
+  return updateMap(map, villageCoords, (cell, i, j) => {
+    var [type, typeName] = getMaybeVillage(map, i, j);
+
     return M.updateIn(cell, ['units', typeName, 'gold'], (oldAmount) => {
       return (oldAmount || 0) + amount;
     });
@@ -85,13 +92,9 @@ function growTrees(map) {
   var map = mapSeqToVec(map);
 
   var treeCoords = filterMap(map, (cell) => M.getIn(cell, ['units', 'Tree']));
+  treeCoords = M.filter(() => Math.random() > 0.5, treeCoords);
 
   return M.reduce((map, [i, j]) => {
-    // TODO: filter first
-    if (Math.random() > 0.5) {
-      return map;
-    }
-
     var emptyNeighbors = findNeighbors(map, i, j).filter(([i, j]) => {
       return M.every((unitName) => {
         return coexistances[unitName].Tree;
@@ -181,9 +184,8 @@ function findRegion(map, i, j) {
 function addIncome(map, turn) {
   var map = mapSeqToVec(map);
 
-  var villageCoords = filterMapByColor(map, turn, (cell) => {
-    var config = M.get(cell, 'units');
-    return getMaybeVillage(map, config)[0];
+  var villageCoords = filterMapByColor(map, turn, (cell, i, j) => {
+    return getMaybeVillage(map, i, j)[0];
   });
 
   return M.reduce((map, [i, j]) => {
@@ -200,10 +202,9 @@ function addIncome(map, turn) {
       return sum + amount;
     }, 0);
 
-    return M.updateIn(map, [i, j, 'units'], (config) => {
-      var [type, typeName] = getMaybeVillage(map, config);
-
-      return M.updateIn(config, [typeName, 'gold'], (oldAmount) => oldAmount + sum);
+    var [type, typeName] = getMaybeVillage(map, i, j);
+    return M.updateIn(map, [i, j, 'units', typeName, 'gold'], (oldAmount) => {
+      return oldAmount + sum;
     });
   }, map, villageCoords);
 }
@@ -211,15 +212,13 @@ function addIncome(map, turn) {
 function payTime(map, turn) {
   var map = mapSeqToVec(map);
 
-  var villageCoords = filterMapByColor(map, turn, (cell) => {
-    var config = M.get(cell, 'units');
-    return getMaybeVillage(map, config)[0];
+  var villageCoords = filterMapByColor(map, turn, (cell, i, j) => {
+    return getMaybeVillage(map, i, j)[0];
   });
 
   return M.reduce((map, [i, j]) => {
     var sum = findRegion(map, i, j).reduce((sum, [i, j]) => {
-      var config = M.getIn(map, [i, j, 'units']);
-      var [type, typeName] = getMaybeVillager(map, config);
+      var [type, typeName] = getMaybeVillager(map, i, j);
 
       var amount = typeName === 'Peasant' ? 2
         : typeName === 'Infantry' ? 6
@@ -230,10 +229,9 @@ function payTime(map, turn) {
       return sum + amount;
     }, 0);
 
-    return M.updateIn(map, [i, j, 'units'], (config) => {
-      var [type, typeName] = getMaybeVillage(map, config);
-
-      return M.updateIn(config, [typeName, 'gold'], (oldAmount) => oldAmount - sum);
+    var [type, typeName] = getMaybeVillage(map, i, j);
+    return M.updateIn(map, [i, j, 'units', typeName, 'gold'], (oldAmount) => {
+      return oldAmount - sum;
     });
   }, map, villageCoords);
 }
@@ -241,15 +239,14 @@ function payTime(map, turn) {
 function dieTime(map, turn) {
   var map = mapSeqToVec(map);
 
-  var villageCoords = filterMapByColor(map, turn, (cell) => {
-    var config = M.get(cell, 'units');
-    return getMaybeVillage(map, config)[0];
+  var villageCoords = filterMapByColor(map, turn, (cell, i, j) => {
+    return getMaybeVillage(map, i, j)[0];
   });
 
   return M.reduce((map, [i, j]) => {
     var config = M.getIn(map, [i, j, 'units']);
 
-    var [type, typeName] = getMaybeVillage(map, config);
+    var [type, typeName] = getMaybeVillage(map, i, j);
 
     var gold = M.getIn(config, [typeName, 'gold']);
     if (gold >= 0) {
@@ -261,19 +258,15 @@ function dieTime(map, turn) {
 
     // turn units into tombstones
     var units = findRegion(map, i, j).filter(([i, j]) => {
-      var config = M.getIn(map, [i, j, 'units']);
+      var [type, typeName] = getMaybeVillager(map, i, j);
 
-      var [type, typeName] = getMaybeVillager(map, config);
-
-      if (type) {
+      if (typeName) {
         return [i, j];
       }
     }, 0);
 
     return units.reduce((map, [i, j]) => {
-      var config = M.getIn(map, [i, j, 'units']);
-
-      var [type, typeName] = getMaybeVillager(map, config);
+      var [type, typeName] = getMaybeVillager(map, i, j);
 
       map = dissocIn(map, [i, j, 'units', typeName]);
       return M.assocIn(map, [i, j, 'units', 'Tombstone'], M.hashMap());
@@ -343,24 +336,18 @@ function getMenuItemsForVillager(typeName, cb) {
     items = [
       // can't invade
       ['Move', 'move'],
-      ['Gather Wood', 'gatherWood'],
-      ['Clear Tombstone', 'clearTombstone'],
       ['Cultivate Meadow', 'cultivateMeadow'],
       ['Build Road', 'buildRoad'],
     ];
   } else if (typeName === 'Infantry') {
     items = [
       ['Move', 'move'],
-      ['Gather Wood', 'gatherWood'],
-      ['Clear Tombstone', 'clearTombstone'],
       ['Kill', 'kill'],
     ];
   } else if (typeName === 'Soldier') {
     items = [
       // tramples meadow unless there's a road
       ['Move', 'move'],
-      ['Gather Wood', 'gatherWood'],
-      ['Clear Tombstone', 'clearTombstone'],
       ['Kill', 'kill'],
     ];
   } else if (typeName === 'Knight') {
@@ -393,8 +380,7 @@ function newVillager(map, destCoords, villageCoords, unitName, gold) {
     return map;
   }
 
-  var config = M.getIn(map, [vi, vj, 'units']);
-  var [type, typeName] = getMaybeVillage(map, config);
+  var [type, typeName] = getMaybeVillage(map, vi, vj);
 
   var noConflictInDest = M.every((potentialConflictName) => {
     return coexistances[potentialConflictName][unitName];
@@ -425,13 +411,11 @@ function gatherWood(map, destCoords, unitCoords) {
   }
 
   var [vi, vj] = findRegion(map, ui, uj).filter(([i, j]) => {
-    // TODO refactor getMaybeVillage(r), type never used, abstract away config
-    var config = M.getIn(map, [i, j, 'units']);
-    return getMaybeVillage(map, config)[0];
+    // TODO refactor getMaybeVillage(r), type never used
+    return getMaybeVillage(map, i, j)[0];
   })[0];
 
-  var config = M.getIn(map, [vi, vj, 'units']);
-  var [type, typeName] = getMaybeVillage(map, config);
+  var [type, typeName] = getMaybeVillage(map, vi, vj);
 
   map = M.updateIn(map, [vi, vj, 'units', typeName, 'wood'], (oldAmount) => {
     return (oldAmount || 0) + 1;
@@ -439,8 +423,7 @@ function gatherWood(map, destCoords, unitCoords) {
   // TODO: is there a tree?
   map = dissocIn(map, [di, dj, 'units', 'Tree']);
 
-  var config2 = M.getIn(map, [ui, uj, 'units']);
-  var [type2, typeName2] = getMaybeVillager(map, config2);
+  var [type2, typeName2] = getMaybeVillager(map, ui, uj);
 
   map = dissocIn(map, [ui, uj, 'units', typeName2]);
   return M.assocIn(map, [di, dj, 'units', typeName2], type2);
@@ -459,8 +442,7 @@ function move(map, destCoords, unitCoords) {
     return map;
   }
 
-  var config = M.getIn(map, [ui, uj, 'units']);
-  var [type, typeName] = getMaybeVillager(map, config);
+  var [type, typeName] = getMaybeVillager(map, ui, uj);
 
   map = dissocIn(map, [ui, uj, 'units', typeName]);
   map = M.assocIn(map, [di, dj, 'units', typeName], type);
@@ -592,11 +574,8 @@ var App = React.createClass({
         ...cancelPendingActionState,
         map: move(map, [i, j], selectedCoords),
       });
-    } else if (pendingAction === 'gatherWood') {
-      this.setState({
-        ...cancelPendingActionState,
-        map: gatherWood(map, [i, j], selectedCoords),
-      });
+    } else if (pendingAction === 'cultivateMeadow') {
+      // TODO: this
     } else {
       throw 'umimplemented ' + pendingAction;
     }
@@ -627,21 +606,21 @@ var App = React.createClass({
 
     if (showMenu) {
       let [i, j] = selectedCoords;
-      var config = M.getIn(map, [i, j, 'units']);
-      var [type, typeName] = getMaybeVillager(map, config);
-      var [type2, typeName2] = getMaybeVillage(map, config);
+      var [type, typeName] = getMaybeVillager(map, i, j);
+      var [type2, typeName2] = getMaybeVillage(map, i, j);
 
       let x = positioner.calcLeft(j, i);
       let y = positioner.calcTop(i);
 
-      if (type) {
+      if (typeName) {
         maybeMenu = (
           <Menu pos={[x, y]}>
             {getMenuItemsForVillager(typeName, this.handleMenuItemClick)}
           </Menu>
         );
-      } else if (type2) {
+      } else if (typeName2) {
         // TODO: need default values
+        var config = M.getIn(map, [i, j, 'units']);
         var gold = M.getIn(config, [typeName2, 'gold']) || 0;
         var wood = M.getIn(config, [typeName2, 'wood']) || 0;
         maybeMenu = (
