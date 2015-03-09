@@ -14,6 +14,13 @@ var map1 = require('./src/map/data/map1');
 
 var js = M.toJs;
 
+// handy, see usage
+function add(x) {
+  return function(y) {
+    return x + y;
+  }
+}
+
 function filterMap(map, f) {
   var map = mapSeqToVec(map);
 
@@ -75,6 +82,15 @@ function getMaybeVillager(map, i, j) {
   return [type, typeName];
 }
 
+function canCoexist(map, unitName, i, j) {
+  return M.every(
+    potentialConflict => coexistances[potentialConflict][unitName],
+    M.keys(M.getIn(map, [i, j, 'units']))
+  );
+}
+
+// ----------- phases
+
 function setInitialVillagesGold(map, amount) {
   var villageCoords = filterMap(map, (cell, i, j) => {
     return getMaybeVillage(map, i, j)[0];
@@ -83,9 +99,7 @@ function setInitialVillagesGold(map, amount) {
   return updateMap(map, villageCoords, (cell, i, j) => {
     var [type, typeName] = getMaybeVillage(map, i, j);
 
-    return M.updateIn(cell, ['units', typeName, 'gold'], (oldAmount) => {
-      return oldAmount + amount;
-    });
+    return M.updateIn(cell, ['units', typeName, 'gold'], add(amount));
   });
 }
 
@@ -97,9 +111,7 @@ function growTrees(map) {
 
   return M.reduce((map, [i, j]) => {
     var emptyNeighbors = findNeighbors(map, i, j).filter(([i, j]) => {
-      return M.every((unitName) => {
-        return coexistances[unitName].Tree;
-      }, M.keys(M.getIn(map, [i, j, 'units'])));
+      return canCoexist(map, 'Tree', i, j);
     });
 
     if (emptyNeighbors.length === 0) {
@@ -194,9 +206,7 @@ function addIncome(map, turn) {
     }, 0);
 
     var [type, typeName] = getMaybeVillage(map, i, j);
-    return M.updateIn(map, [i, j, 'units', typeName, 'gold'], (oldAmount) => {
-      return oldAmount + sum;
-    });
+    return M.updateIn(map, [i, j, 'units', typeName, 'gold'], add(sum));
   }, map, villageCoords);
 }
 
@@ -221,9 +231,7 @@ function payTime(map, turn) {
     }, 0);
 
     var [type, typeName] = getMaybeVillage(map, i, j);
-    return M.updateIn(map, [i, j, 'units', typeName, 'gold'], (oldAmount) => {
-      return oldAmount - sum;
-    });
+    return M.updateIn(map, [i, j, 'units', typeName, 'gold'], add(-sum));
   }, map, villageCoords);
 }
 
@@ -381,20 +389,13 @@ function newVillager(map, destCoords, villageCoords, unitName, gold) {
   if (!clickedInRegion) {
     return map;
   }
-
-  var [type, typeName] = getMaybeVillage(map, vi, vj);
-
-  var noConflictInDest = M.every((potentialConflictName) => {
-    return coexistances[potentialConflictName][unitName];
-  }, M.keys(M.getIn(map, [di, dj, 'units'])));
-
-  if (!noConflictInDest) {
+  if (!canCoexist(map, unitName, di, dj)) {
     return map;
   }
 
-  map = M.updateIn(map, [vi, vj, 'units', typeName, 'gold'], (oldAmount) => {
-    return oldAmount - gold;
-  });
+  var [type, typeName] = getMaybeVillage(map, vi, vj);
+
+  map = M.updateIn(map, [vi, vj, 'units', typeName, 'gold'], add(-gold));
 
   return M.assocIn(map, [di, dj, 'units', unitName], M.hashMap());
 }
@@ -405,10 +406,7 @@ function findVillageInRegion(map, region) {
   })[0];
 }
 
-function move(map, destCoords, unitCoords) {
-  var [di, dj] = destCoords;
-  var [ui, uj] = unitCoords;
-
+function move(map, [di, dj], [ui, uj]) {
   var [type, typeName] = getMaybeVillager(map, ui, uj);
   var destConfig = M.getIn(map, [di, dj]);
   var destColor = M.get(destConfig, 'color');
@@ -444,17 +442,12 @@ function move(map, destCoords, unitCoords) {
     let [vi, vj] = findVillageInRegion(map, findRegion(map, ui, uj))
     let [type, typeName] = getMaybeVillage(map, vi, vj);
 
-    map = M.updateIn(map, [vi, vj, 'units', typeName, 'wood'], (oldAmount) => {
-      return oldAmount + 1;
-    });
+    map = M.updateIn(map, [vi, vj, 'units', typeName, 'wood'], add(1));
   }
 
   // check if unit can coexist on dest tile. this must be done after removing
   // tombstone and tree
-  var canCoexist = M.every((potentialConflictName) => {
-    return coexistances[potentialConflictName][typeName];
-  }, M.keys(M.getIn(map, [di, dj, 'units'])));
-  if (!canCoexist) {
+  if (!canCoexist(map, typeName, di, dj)) {
     return map;
   }
 
@@ -509,12 +502,8 @@ function move(map, destCoords, unitCoords) {
       var gold = M.getIn(map, [i, j, 'units', typeName, 'gold']);
       var wood = M.getIn(map, [i, j, 'units', typeName, 'wood']);
 
-      map = M.updateIn(map, [bi, bj, 'units', bestTypeName, 'gold'], oldAmount => {
-        return oldAmount + gold;
-      });
-      map = M.updateIn(map, [bi, bj, 'units', bestTypeName, 'wood'], oldAmount => {
-        return oldAmount + wood;
-      });
+      map = M.updateIn(map, [bi, bj, 'units', bestTypeName, 'gold'], add(gold));
+      map = M.updateIn(map, [bi, bj, 'units', bestTypeName, 'wood'], add(wood));
       return dissocIn(map, [i, j, 'units', typeName]);
     }, map, villageToRegionSizeM);
 
