@@ -319,9 +319,33 @@ function getMenuItemsForVillage(typeName, gold, wood, cb) {
   });
 }
 
+// state returners
+
+function newVillager(map, destCoords, villageCoords, unitName, gold) {
+  var [i, j] = destCoords;
+  var [vi, vj] = villageCoords;
+
+  var config = M.getIn(map, [vi, vj, 'units']);
+  var [type, typeName] = getMaybeVillage(map, config);
+
+  var noConflictInDest = M.every((potentialConflictName) => {
+    return coexistances[potentialConflictName][unitName];
+  }, M.keys(M.getIn(map, [i, j, 'units'])));
+
+  if (!noConflictInDest) {
+    return map;
+  }
+
+  map = M.updateIn(map, [vi, vj, 'units', typeName, 'gold'], (oldAmount) => {
+    return (oldAmount || 0) - gold;
+  });
+
+  return M.assocIn(map, [i, j, 'units', unitName], M.hashMap());
+}
+
 // -------------------------- menu actions over
 
-var cancelState = {
+var cancelPendingActionState = {
   selectedCoords: null,
   pendingAction: null,
   showMenu: false,
@@ -344,7 +368,7 @@ var App = React.createClass({
     window.addEventListener('keydown', (e) => {
       // escape
       if (e.which === 27) {
-        this.setState(cancelState);
+        this.setState(cancelPendingActionState);
       }
     });
 
@@ -403,7 +427,7 @@ var App = React.createClass({
 
     if (!pendingAction) {
       this.setState({
-        ...cancelState,
+        ...cancelPendingActionState,
         selectedCoords: [i, j],
         showMenu: true,
       });
@@ -415,38 +439,35 @@ var App = React.createClass({
     var clickedInRegion = coords.some(([i2, j2]) => i === i2 && j === j2);
 
     if (!clickedInRegion) {
-      this.setState(cancelState);
+      this.setState(cancelPendingActionState);
       return;
     }
 
     if (pendingAction === 'newPeasant') {
       // assume `selectedCoords` to be village coordinates
       // assume enough gold (otherwise menu itema disabled in render)
-      var config = M.getIn(map, [vi, vj, 'units']);
-      var [type, typeName] = getMaybeVillage(map, config);
-
-      var noConflictInDest = M.every((unitName) => {
-        return coexistances[unitName].Peasant;
-      }, M.keys(M.getIn(map, [i, j, 'units'])));
-
-      if (!noConflictInDest) {
-        this.setState(cancelState);
-        return;
-      }
-
-      map = M.updateIn(map, [vi, vj, 'units', typeName, 'gold'], (oldAmount) => {
-        return oldAmount - 10;
-      });
-
-      map = M.assocIn(map, [i, j, 'units', 'Peasant'], M.hashMap());
       this.setState({
-        ...cancelState,
-        map: map,
+        ...cancelPendingActionState,
+        map: newVillager(map, [i, j], [vi, vj], 'Peasant', 10),
       });
-      return;
+    } else if (pendingAction === 'newInfantry') {
+      this.setState({
+        ...cancelPendingActionState,
+        map: newVillager(map, [i, j], [vi, vj], 'Infantry', 20),
+      });
+    } else if (pendingAction === 'newSoldier') {
+      this.setState({
+        ...cancelPendingActionState,
+        map: newVillager(map, [i, j], [vi, vj], 'Soldier', 30),
+      });
+    } else if (pendingAction === 'newKnight') {
+      this.setState({
+        ...cancelPendingActionState,
+        map: newVillager(map, [i, j], [vi, vj], 'Knight', 40),
+      });
+    } else {
+      throw 'umimplemented ' + pendingAction;
     }
-
-    throw 'umimplemented ' + pendingAction;
   },
 
   handleTileHover: function(i, j) {
@@ -502,8 +523,8 @@ var App = React.createClass({
     return (
       <div>
         <div style={consoleS}>
-          <div>{phase} phase</div>
-          <div>{pendingAction}</div>
+          <div>Phase: {phase}</div>
+          <div>Pending action: {pendingAction}</div>
           {JSON.stringify(hover)}
           <pre>
             {JSON.stringify(js(M.getIn(mapSeqToVec(map), hover)), null, 2)}
