@@ -13,9 +13,9 @@ var assetDims = {
   Town: [66, 68],
   Tree: [30, 79],
   Watchtower: [32, 66],
-  misc: {
-    overlay: [69, 72],
-  },
+
+  overlay: [69, 72],
+  menuItem: [190, 45],
 };
 
 module.exports = assetDims;

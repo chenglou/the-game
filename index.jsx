@@ -1,6 +1,6 @@
 var React = require('react');
 var Grid = require('./src/map/Grid');
-var Menu = require('./src/Menu');
+var {Menu, MenuItem} = require('./src/Menu');
 var M = require('mori');
 var coexistances = require('./src/coexistances');
 var dissocIn = require('./src/utils/dissocIn');
@@ -305,16 +305,16 @@ function getMenuItemsForVillage(typeName, gold, wood, cb) {
   return items.map(([desc, action, goldReq, woodReq]) => {
     if (gold >= goldReq && wood >= woodReq) {
       return (
-        <div key={action} onClick={cb.bind(null, action)}>
+        <MenuItem key={action} onClick={cb.bind(null, action)} disabled={false}>
           {desc}
-        </div>
+        </MenuItem>
       );
     }
 
     return (
-      <div key={action}>
-        {desc} (disabled)
-      </div>
+      <MenuItem key={action} disabled={true}>
+        {desc}
+      </MenuItem>
     );
   });
 }
@@ -324,6 +324,7 @@ function getMenuItemsForVillage(typeName, gold, wood, cb) {
 var cancelState = {
   selectedCoords: null,
   pendingAction: null,
+  showMenu: false,
 };
 
 var App = React.createClass({
@@ -335,6 +336,7 @@ var App = React.createClass({
       phase: 'initGame',
       selectedCoords: null,
       pendingAction: null,
+      showMenu: false,
     };
   },
 
@@ -392,6 +394,7 @@ var App = React.createClass({
   handleMenuItemClick: function(action) {
     this.setState({
       pendingAction: action,
+      showMenu: false,
     });
   },
 
@@ -402,6 +405,7 @@ var App = React.createClass({
       this.setState({
         ...cancelState,
         selectedCoords: [i, j],
+        showMenu: true,
       });
       return;
     }
@@ -417,7 +421,7 @@ var App = React.createClass({
 
     if (pendingAction === 'newPeasant') {
       // assume `selectedCoords` to be village coordinates
-      // assume enough gold (otherwise menu item disabled in render)
+      // assume enough gold (otherwise menu itema disabled in render)
       var config = M.getIn(map, [vi, vj, 'units']);
       var [type, typeName] = getMaybeVillage(map, config);
 
@@ -453,7 +457,7 @@ var App = React.createClass({
 
   render: function() {
     var state = this.state;
-    var {hover, selectedCoords, map} = state;
+    var {hover, selectedCoords, map, phase, pendingAction, showMenu} = state;
 
     var gridWrapper = {
       border: '1px solid black',
@@ -468,7 +472,7 @@ var App = React.createClass({
 
     var maybeMenu;
 
-    if (selectedCoords) {
+    if (showMenu) {
       let [i, j] = selectedCoords;
       var config = M.getIn(map, [i, j, 'units']);
       var [type, typeName] = getMaybeVillager(map, config);
@@ -498,7 +502,8 @@ var App = React.createClass({
     return (
       <div>
         <div style={consoleS}>
-          <div>{state.phase} phase</div>
+          <div>{phase} phase</div>
+          <div>{pendingAction}</div>
           {JSON.stringify(hover)}
           <pre>
             {JSON.stringify(js(M.getIn(mapSeqToVec(map), hover)), null, 2)}

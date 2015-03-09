@@ -1,6 +1,41 @@
 var React = require('react');
+var assetUrls = require('./assetUrls');
+var assetDims = require('./assetDims');
+var url = require('./utils/imgUrl');
 
 var p = React.PropTypes;
+
+var MenuItem = React.createClass({
+  propTypes: {
+    children: p.string.isRequired,
+    disabled: p.bool.isRequired,
+  },
+
+  render: function() {
+    var {children, disabled, ...props} = this.props;
+
+    var [w, h] = assetDims.menuItem;
+
+    var itemS = {
+      height: h,
+      width: w,
+      backgroundRepeat: 'no-repeat',
+      backgroundImage: disabled ? url(assetUrls.MenuItemDisabled) : url(assetUrls.MenuItem),
+    };
+
+    var innerS = {
+      padding: '13px 0px 0px 10px',
+    }
+
+    return (
+      <div style={itemS} {...props}>
+        <div style={innerS}>
+          {children}
+        </div>
+      </div>
+    );
+  }
+});
 
 var Menu = React.createClass({
   propTypes: {
@@ -11,45 +46,18 @@ var Menu = React.createClass({
     var {children, pos: [x, y]} = this.props;
 
     var s = {
-      width: 200,
-      height: 200,
-      outline: '1px solid black',
       position: 'absolute',
       top: y + 50,
       left: x + 50,
-      backgroundColor: 'white',
       zIndex: 101,
-    };
-
-    var innerS = {
-      position: 'relative',
-      display: 'flex',
-      flexDirection: 'column',
-    };
-
-    var itemS = {
-      position: 'relative',
-      top: 'initial',
-      left: 'initial',
-      flexGrow: 1,
-      flexBasis: 'auto',
-      // height: 50,
     };
 
     return (
       <div style={s}>
-        <div style={innerS}>
-          {React.Children.map(children, (child, i) => {
-            return (
-              <div key={i} style={itemS}>
-                {child}
-              </div>
-            );
-          })}
-        </div>
+        {children}
       </div>
     );
   }
 });
 
-module.exports = Menu;
+module.exports = {MenuItem, Menu};

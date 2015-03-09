@@ -18,7 +18,7 @@ function orderUnitsForDisplay(unitNames) {
 }
 
 function getOverlayStyle(bg, active) {
-  var [w, h] = assetDims.misc.overlay;
+  var [w, h] = assetDims.overlay;
 
   return {
     backgroundImage: bg,

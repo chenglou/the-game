@@ -12,9 +12,9 @@ var UnitWrapper = React.createClass({
   },
 
   render: function() {
-    var props = this.props;
+    var {unitName, children} = this.props;
 
-    var [imgW, imgH] = assetDims[props.unitName];
+    var [imgW, imgH] = assetDims[unitName];
 
     var s = {
       width: '100%',
@@ -22,7 +22,7 @@ var UnitWrapper = React.createClass({
     };
 
     var innerS = {
-      backgroundImage: url(assetUrls[props.unitName]),
+      backgroundImage: url(assetUrls[unitName]),
       backgroundRepeat: 'no-repeat',
       width: imgW,
       height: imgH,
@@ -32,7 +32,9 @@ var UnitWrapper = React.createClass({
 
     return (
       <div style={s}>
-        <div style={innerS}></div>
+        <div style={innerS}>
+          {children}
+        </div>
       </div>
     );
   }

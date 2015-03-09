@@ -13,6 +13,8 @@ var assetUrls = {
   Town: require('./useful/Town.png'),
   Tree: require('./useful/Tree.png'),
   Watchtower: require('./useful/Watchtower.png'),
+  MenuItem: require('./useful/MenuItem.png'),
+  MenuItemDisabled: require('./useful/MenuItemDisabled.png'),
 };
 
 module.exports = assetUrls;
