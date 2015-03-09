@@ -87,6 +87,7 @@ function growTrees(map) {
   var treeCoords = filterMap(map, (cell) => M.getIn(cell, ['units', 'Tree']));
 
   return M.reduce((map, [i, j]) => {
+    // TODO: filter first
     if (Math.random() > 0.5) {
       return map;
     }
@@ -134,7 +135,7 @@ function matureBuilt(map, turn, unitName) {
   });
 }
 
-function findRegion(map, [i, j]) {
+function findRegion(map, i, j) {
   var map = mapSeqToVec(map);
 
   var color = M.getIn(map, [i, j, 'color']);
@@ -159,6 +160,24 @@ function findRegion(map, [i, j]) {
     .map(([i, j]) => [parseInt(i), parseInt(j)]);
 }
 
+// region + outer ring (explore outside land)
+// function findOuterRegion(map, i, j) {
+//   var map = mapSeqToVec(map);
+
+//   var color = M.getIn(map, [i, j, 'color']);
+
+//   var coords = findRegion(map, i, j);
+//   var outers = coords.map(([i, j]) => {
+//     return findNeighbors(map, i, j).filter(([i, j]) => {
+//       return M.getIn(map, [i, j, 'color']) !== color;
+//     });
+//   });
+//   outers = [].concat.apply([], outers);
+//   debugger;
+
+//   return outers;
+// }
+
 function addIncome(map, turn) {
   var map = mapSeqToVec(map);
 
@@ -168,7 +187,7 @@ function addIncome(map, turn) {
   });
 
   return M.reduce((map, [i, j]) => {
-    var sum = findRegion(map, [i, j]).reduce((sum, [i, j]) => {
+    var sum = findRegion(map, i, j).reduce((sum, [i, j]) => {
       var config = M.getIn(map, [i, j, 'units']);
       var get = (unitName) => M.get(config, unitName);
 
@@ -198,7 +217,7 @@ function payTime(map, turn) {
   });
 
   return M.reduce((map, [i, j]) => {
-    var sum = findRegion(map, [i, j]).reduce((sum, [i, j]) => {
+    var sum = findRegion(map, i, j).reduce((sum, [i, j]) => {
       var config = M.getIn(map, [i, j, 'units']);
       var [type, typeName] = getMaybeVillager(map, config);
 
@@ -241,7 +260,7 @@ function dieTime(map, turn) {
     map = M.assocIn(map, [i, j, 'units', typeName, 'gold'], 0);
 
     // turn units into tombstones
-    var units = findRegion(map, [i, j]).filter(([i, j]) => {
+    var units = findRegion(map, i, j).filter(([i, j]) => {
       var config = M.getIn(map, [i, j, 'units']);
 
       var [type, typeName] = getMaybeVillager(map, config);
@@ -301,7 +320,6 @@ function getMenuItemsForVillage(typeName, gold, wood, cb) {
   // hovel: overtaken by enemy soldier
   // town: overtaken by enemy soldier
   // fort: overtaken by knight
-
   return items.map(([desc, action, goldReq, woodReq]) => {
     if (gold >= goldReq && wood >= woodReq) {
       return (
@@ -319,18 +337,68 @@ function getMenuItemsForVillage(typeName, gold, wood, cb) {
   });
 }
 
+function getMenuItemsForVillager(typeName, cb) {
+  var items;
+  if (typeName === 'Peasant') {
+    items = [
+      // can't invade
+      ['Move', 'move'],
+      ['Gather Wood', 'gatherWood'],
+      ['Clear Tombstone', 'clearTombstone'],
+      ['Cultivate Meadow', 'cultivateMeadow'],
+      ['Build Road', 'buildRoad'],
+    ];
+  } else if (typeName === 'Infantry') {
+    items = [
+      ['Move', 'move'],
+      ['Gather Wood', 'gatherWood'],
+      ['Clear Tombstone', 'clearTombstone'],
+      ['Kill', 'kill'],
+    ];
+  } else if (typeName === 'Soldier') {
+    items = [
+      // tramples meadow unless there's a road
+      ['Move', 'move'],
+      ['Gather Wood', 'gatherWood'],
+      ['Clear Tombstone', 'clearTombstone'],
+      ['Kill', 'kill'],
+    ];
+  } else if (typeName === 'Knight') {
+    items = [
+      // can't move into tree, etc. tramples meadow unless road
+      ['Move', 'move'],
+      ['Kill', 'kill'],
+    ];
+  }
+
+  return items.map(([desc, action]) => {
+    return (
+      <MenuItem key={action} onClick={cb.bind(null, action)} disabled={false}>
+        {desc}
+      </MenuItem>
+    );
+  });
+}
+
 // state returners
 
 function newVillager(map, destCoords, villageCoords, unitName, gold) {
-  var [i, j] = destCoords;
+  var [di, dj] = destCoords;
   var [vi, vj] = villageCoords;
+
+  var clickedInRegion = findRegion(map, vi, vj)
+    .some(([i2, j2]) => di === i2 && dj === j2);
+
+  if (!clickedInRegion) {
+    return map;
+  }
 
   var config = M.getIn(map, [vi, vj, 'units']);
   var [type, typeName] = getMaybeVillage(map, config);
 
   var noConflictInDest = M.every((potentialConflictName) => {
     return coexistances[potentialConflictName][unitName];
-  }, M.keys(M.getIn(map, [i, j, 'units'])));
+  }, M.keys(M.getIn(map, [di, dj, 'units'])));
 
   if (!noConflictInDest) {
     return map;
@@ -340,7 +408,65 @@ function newVillager(map, destCoords, villageCoords, unitName, gold) {
     return (oldAmount || 0) - gold;
   });
 
-  return M.assocIn(map, [i, j, 'units', unitName], M.hashMap());
+  return M.assocIn(map, [di, dj, 'units', unitName], M.hashMap());
+}
+
+function gatherWood(map, destCoords, unitCoords) {
+  var [di, dj] = destCoords;
+  var [ui, uj] = unitCoords;
+
+  // TODO: peasant can't go on neighbor enemy tiles
+  var canMoveToDest = findNeighbors(map, ui, uj).some(([i, j]) => {
+    return i === di && j === dj;
+  });
+
+  if (!canMoveToDest) {
+    return map;
+  }
+
+  var [vi, vj] = findRegion(map, ui, uj).filter(([i, j]) => {
+    // TODO refactor getMaybeVillage(r), type never used, abstract away config
+    var config = M.getIn(map, [i, j, 'units']);
+    return getMaybeVillage(map, config)[0];
+  })[0];
+
+  var config = M.getIn(map, [vi, vj, 'units']);
+  var [type, typeName] = getMaybeVillage(map, config);
+
+  map = M.updateIn(map, [vi, vj, 'units', typeName, 'wood'], (oldAmount) => {
+    return (oldAmount || 0) + 1;
+  });
+  // TODO: is there a tree?
+  map = dissocIn(map, [di, dj, 'units', 'Tree']);
+
+  var config2 = M.getIn(map, [ui, uj, 'units']);
+  var [type2, typeName2] = getMaybeVillager(map, config2);
+
+  map = dissocIn(map, [ui, uj, 'units', typeName2]);
+  return M.assocIn(map, [di, dj, 'units', typeName2], type2);
+}
+
+function move(map, destCoords, unitCoords) {
+  var [di, dj] = destCoords;
+  var [ui, uj] = unitCoords;
+
+  // TODO: peasant can't go on neighbor enemy tiles
+  var canMoveToDest = findNeighbors(map, ui, uj).some(([i, j]) => {
+    return i === di && j === dj;
+  });
+
+  if (!canMoveToDest) {
+    return map;
+  }
+
+  var config = M.getIn(map, [ui, uj, 'units']);
+  var [type, typeName] = getMaybeVillager(map, config);
+
+  map = dissocIn(map, [ui, uj, 'units', typeName]);
+  map = M.assocIn(map, [di, dj, 'units', typeName], type);
+
+  // might be neutral tile
+  return map;
 }
 
 // -------------------------- menu actions over
@@ -423,7 +549,7 @@ var App = React.createClass({
   },
 
   handleTileMouseDown: function(i, j) {
-    var {map, pendingAction} = this.state;
+    var {map, pendingAction, selectedCoords} = this.state;
 
     if (!pendingAction) {
       this.setState({
@@ -434,36 +560,42 @@ var App = React.createClass({
       return;
     }
 
-    var {selectedCoords: [vi, vj]} = this.state;
-    var coords = findRegion(map, [vi, vj]);
-    var clickedInRegion = coords.some(([i2, j2]) => i === i2 && j === j2);
-
-    if (!clickedInRegion) {
-      this.setState(cancelPendingActionState);
-      return;
-    }
-
     if (pendingAction === 'newPeasant') {
       // assume `selectedCoords` to be village coordinates
       // assume enough gold (otherwise menu itema disabled in render)
       this.setState({
         ...cancelPendingActionState,
-        map: newVillager(map, [i, j], [vi, vj], 'Peasant', 10),
+        map: newVillager(map, [i, j], selectedCoords, 'Peasant', 10),
       });
     } else if (pendingAction === 'newInfantry') {
       this.setState({
         ...cancelPendingActionState,
-        map: newVillager(map, [i, j], [vi, vj], 'Infantry', 20),
+        map: newVillager(map, [i, j], selectedCoords, 'Infantry', 20),
       });
     } else if (pendingAction === 'newSoldier') {
       this.setState({
         ...cancelPendingActionState,
-        map: newVillager(map, [i, j], [vi, vj], 'Soldier', 30),
+        map: newVillager(map, [i, j], selectedCoords, 'Soldier', 30),
       });
     } else if (pendingAction === 'newKnight') {
       this.setState({
         ...cancelPendingActionState,
-        map: newVillager(map, [i, j], [vi, vj], 'Knight', 40),
+        map: newVillager(map, [i, j], selectedCoords, 'Knight', 40),
+      });
+    } else if (pendingAction === 'upgradeToTown') {
+      //
+    } else if (pendingAction === 'upgradeToFort') {
+      //
+    } else if (pendingAction === 'move') {
+      // assume `selectedCoords` to be unit coordinates
+      this.setState({
+        ...cancelPendingActionState,
+        map: move(map, [i, j], selectedCoords),
+      });
+    } else if (pendingAction === 'gatherWood') {
+      this.setState({
+        ...cancelPendingActionState,
+        map: gatherWood(map, [i, j], selectedCoords),
       });
     } else {
       throw 'umimplemented ' + pendingAction;
@@ -504,8 +636,8 @@ var App = React.createClass({
 
       if (type) {
         maybeMenu = (
-          <Menu items={[1,2,3]} pos={[x, y]}>
-            asd
+          <Menu pos={[x, y]}>
+            {getMenuItemsForVillager(typeName, this.handleMenuItemClick)}
           </Menu>
         );
       } else if (type2) {
