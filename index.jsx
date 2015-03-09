@@ -271,6 +271,56 @@ function payOrDie(map, turn) {
 
 // -------------------------- phases over
 
+function getMenuItemsForVillage(typeName, gold, wood, cb) {
+  var items;
+  if (typeName === 'Hovel') {
+    items = [
+      ['New Peasant', 'newPeasant', 10, 0],
+      ['New Infantry', 'newInfantry', 20, 0],
+      ['Upgrade to Town', 'upgradeToTown', 0, 8],
+    ];
+  } else if (typeName === 'Town') {
+    items = [
+      ['New Peasant', 'newPeasant', 10, 0],
+      ['New Infantry', 'newInfantry', 20, 0],
+      ['New Soldier', 'newSoldier', 30, 0],
+      ['New Watchtower', 'newWatchtower', 0, 5],
+      ['Upgrade to Fort', 'upgradeToFort', 0, 8],
+    ];
+  } else if (typeName === 'Fort') {
+    items = [
+      ['New Peasant', 'newPeasant', 10, 0],
+      ['New Infantry', 'newInfantry', 20, 0],
+      ['New Soldier', 'newSoldier', 30, 0],
+      ['New Knight', 'newKnight', 40, 0],
+      ['New Watchtower', 'newWatchtower', 0, 5],
+      ['Upgrade to Fort', 'upgradeToFort', 0, 8],
+    ];
+  }
+
+  // hovel: overtaken by enemy soldier
+  // town: overtaken by enemy soldier
+  // fort: overtaken by knight
+
+  return items.map(([desc, action, goldReq, woodReq]) => {
+    if (gold >= goldReq && wood >= woodReq) {
+      return (
+        <div key={action} onClick={cb.bind(null, action)}>
+          {desc}
+        </div>
+      );
+    }
+
+    return (
+      <div key={action}>
+        {desc} (disabled)
+      </div>
+    );
+  });
+}
+
+// -------------------------- menu actions over
+
 var cancelState = {
   selectedCoords: null,
   pendingAction: null,
@@ -350,6 +400,7 @@ var App = React.createClass({
 
     if (!pendingAction) {
       this.setState({
+        ...cancelState,
         selectedCoords: [i, j],
       });
       return;
@@ -364,7 +415,7 @@ var App = React.createClass({
       return;
     }
 
-    if (pendingAction === 'newVillager') {
+    if (pendingAction === 'newPeasant') {
       // assume `selectedCoords` to be village coordinates
       // assume enough gold (otherwise menu item disabled in render)
       var config = M.getIn(map, [vi, vj, 'units']);
@@ -433,37 +484,12 @@ var App = React.createClass({
           </Menu>
         );
       } else if (type2) {
-        // peasant 10g
-        // infantry 20
-        // soldier 30
-        // knight 40
-
-        // hovel: train peasant, train infantry (overtaken by enemy soldier)
-
-        // town: train peasant, train infantry, train soldier, build towers
-        //   (overtaken by enemy soldier)
-
-        // fort: train peasant, train infantry, train soldier, train knight,
-        //   build towers (overtaken by knight)
-        var gold = M.getIn(config, [typeName2, 'gold']);
-        var maybeTrain;
-        // peasant costs 10
-        if (gold >= 10) {
-          maybeTrain = (
-            <div onClick={this.handleMenuItemClick.bind(null, 'newVillager')}>
-              Train new villager
-            </div>
-          );
-        } else {
-          maybeTrain = (
-            <div>
-              Train new villager (not enough gold)
-            </div>
-          );
-        }
+        // TODO: need default values
+        var gold = M.getIn(config, [typeName2, 'gold']) || 0;
+        var wood = M.getIn(config, [typeName2, 'wood']) || 0;
         maybeMenu = (
           <Menu pos={[x, y]}>
-            {maybeTrain}
+            {getMenuItemsForVillage(typeName2, gold, wood, this.handleMenuItemClick)}
           </Menu>
         );
       }
@@ -478,7 +504,7 @@ var App = React.createClass({
             {JSON.stringify(js(M.getIn(mapSeqToVec(map), hover)), null, 2)}
           </pre>
         </div>
-        <div className="gridWrapper" style={gridWrapper}>
+        <div style={gridWrapper}>
           <Grid
             active={hover}
             tileConfigs={map}

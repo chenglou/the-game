@@ -11,7 +11,7 @@ var Menu = React.createClass({
     var {children, pos: [x, y]} = this.props;
 
     var s = {
-      width: 100,
+      width: 200,
       height: 200,
       outline: '1px solid black',
       position: 'absolute',
@@ -31,7 +31,9 @@ var Menu = React.createClass({
       position: 'relative',
       top: 'initial',
       left: 'initial',
-      height: 50,
+      flexGrow: 1,
+      flexBasis: 'auto',
+      // height: 50,
     };
 
     return (

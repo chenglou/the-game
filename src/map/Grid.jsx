@@ -85,7 +85,6 @@ var Grid = React.createClass({
               {js(unitComponents)}
               <div style={getOverlayStyle(overlay, false)}></div>
               {maybeActiveOverlay}
-              {i + ',' + j}
           </Tile>
         );
       }, row, M.range());
@@ -101,7 +100,7 @@ var Grid = React.createClass({
     };
     return (
       <div style={s}>
-        <div style={tilesS}>
+        <div className="gridWrapper" style={tilesS}>
           {js(tiles)}
         </div>
         {props.children}
