@@ -16,7 +16,7 @@ var p = React.PropTypes;
 function surroundWithSea(map) {
   var seaTileConfig = M.toClj({
     units: {
-      Sea: {}
+      Sea: everyUnit.defaultConfig.Sea,
     },
     color: 'Gray',
   });
@@ -79,7 +79,7 @@ var Editor = React.createClass({
   getInitialState: function() {
     var row = M.repeat(10, M.toClj({
       units: {
-        Grass: {},
+        Grass: everyUnit.defaultConfig.Grass,
       },
       color: 'Gray',
     }));
@@ -103,7 +103,7 @@ var Editor = React.createClass({
     var tiles = this.state.tiles;
     var grassTileConfig = M.toClj({
       units: {
-        Grass: {}
+        Grass: everyUnit.defaultConfig.Grass,
       },
       color: 'Gray',
     });
@@ -130,7 +130,8 @@ var Editor = React.createClass({
     });
   },
 
-  getNewTiles: function(i, j) {
+  getNewUnitsOnTile: function(i, j) {
+    // TODO: 0 cooldown for road and meadow
     var tiles = mapSeqToVec(this.state.tiles);
     var selectedUnit = this.state.selectedUnit;
     var tile = M.toJs(M.getIn(tiles, [i, j]));
@@ -141,7 +142,7 @@ var Editor = React.createClass({
       }
     }
 
-    tile.units[selectedUnit] = {};
+    tile.units[selectedUnit] = everyUnit.defaultConfig[selectedUnit];
     tile.color = this.state.selectedColor;
 
     return M.updateIn(tiles, [i, j], () => M.toClj(tile));
@@ -149,12 +150,12 @@ var Editor = React.createClass({
 
   handleTileMouseDown: function(i, j) {
     this.setState({
-      tiles: this.getNewTiles(i, j),
+      tiles: this.getNewUnitsOnTile(i, j),
     });
   },
 
   handleTileHover: function(i, j) {
-    var tiles = this.state.clicking ? this.getNewTiles(i, j) : this.state.tiles;
+    var tiles = this.state.clicking ? this.getNewUnitsOnTile(i, j) : this.state.tiles;
     this.setState({
       hover: [i, j],
       tiles: tiles,
@@ -289,7 +290,7 @@ var Editor = React.createClass({
           style={{WebkitUserSelect: 'inherit'}}
           value={JSON.stringify(M.toJs(state.tiles))}
           onChange={this.handleTextAreaChange}
-          cols={60}
+          cols={120}
           rows={20} />
       </div>
     );

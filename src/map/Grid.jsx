@@ -85,6 +85,7 @@ var Grid = React.createClass({
               {js(unitComponents)}
               <div style={getOverlayStyle(overlay, false)}></div>
               {maybeActiveOverlay}
+              {false && i + ',' + j}
           </Tile>
         );
       }, row, M.range());

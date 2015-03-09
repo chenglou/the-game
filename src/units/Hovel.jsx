@@ -5,8 +5,8 @@ var p = React.PropTypes;
 
 var Hovel = React.createClass({
   propTypes: {
-    gold: p.number,
-    wood: p.number,
+    gold: p.number.isRequired,
+    wood: p.number.isRequired,
   },
 
   render: function() {

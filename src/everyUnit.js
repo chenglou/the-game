@@ -1,4 +1,4 @@
-var everyUnitComp = {
+var comp = {
   Hovel: require('./units/Hovel'),
   Town: require('./units/Town'),
   Fort: require('./units/Fort'),
@@ -17,57 +17,73 @@ var everyUnitComp = {
   Watchtower: require('./units/Watchtower'),
 };
 
-var everyUnitNameInDisplayOrder = {
-  'Grass': 1,
-  'Sea': 1,
+var nameInDisplayOrder = {
+  Grass: 1,
+  Sea: 1,
 
-  'Hovel': 2,
-  'Town': 2,
-  'Fort': 2,
+  Hovel: 2,
+  Town: 2,
+  Fort: 2,
 
-  'Road': 3,
+  Road: 3,
 
-  'Meadow': 4,
-  'Tree': 4,
+  Meadow: 4,
+  Tree: 4,
 
-  'Tombstone': 5,
+  Tombstone: 5,
 
-  'Watchtower': 6,
+  Watchtower: 6,
 
-  'Peasant': 7,
-  'Infantry': 7,
-  'Soldier': 7,
-  'Knight': 7,
+  Peasant: 7,
+  Infantry: 7,
+  Soldier: 7,
+  Knight: 7,
 };
 
-var everyUnitRank = {
+var rank = {
   // shouldnt be needing these
-  'Grass': 0,
-  'Sea': 0,
-  'Road': 0,
-  'Meadow': 0,
-  'Tree': 0,
-  'Tombstone': 0,
+  Grass: 0,
+  Sea: 0,
+  Road: 0,
+  Meadow: 0,
+  Tree: 0,
+  Tombstone: 0,
 
   // hovel: overtaken by enemy soldier
   // town: overtaken by enemy soldier
   // fort: overtaken by knight
-  'Hovel': 2,
-  'Town': 3,
-  'Fort': 4,
+  Hovel: 2,
+  Town: 3,
+  Fort: 4,
 
-  'Peasant': 1,
-  'Infantry': 2,
-  'Soldier': 4, // not a typo
-  'Knight': 5,
+  Peasant: 1,
+  Infantry: 2,
+  Soldier: 4, // not a typo
+  Knight: 5,
 
-  'Watchtower': 2,
+  Watchtower: 2,
 };
 
-var everyUnit = {
-  nameInDisplayOrder: everyUnitNameInDisplayOrder,
-  comp: everyUnitComp,
-  rank: everyUnitRank,
+var defaultConfig = {
+  Grass: {},
+  Sea: {},
+
+  Hovel: {gold: 7, wood: 0},
+  Town: {gold: 7, wood: 0},
+  Fort: {gold: 7, wood: 0},
+
+  // careful about the cooldown here during initialization
+  Road: {cooldown: 1},
+  Meadow: {cooldown: 2},
+
+  Tree: {},
+  Tombstone: {},
+  Watchtower: {},
+
+  Peasant: {hasMoved: false, cooldown: 0},
+  Infantry: {hasMoved: false},
+  Soldier: {hasMoved: false},
+  Knight: {hasMoved: false},
 };
 
-module.exports = everyUnit;
+module.exports = {nameInDisplayOrder, comp, rank, defaultConfig};

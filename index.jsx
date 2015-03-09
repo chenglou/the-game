@@ -84,7 +84,7 @@ function setInitialVillagesGold(map, amount) {
     var [type, typeName] = getMaybeVillage(map, i, j);
 
     return M.updateIn(cell, ['units', typeName, 'gold'], (oldAmount) => {
-      return (oldAmount || 0) + amount;
+      return oldAmount + amount;
     });
   });
 }
@@ -393,7 +393,7 @@ function newVillager(map, destCoords, villageCoords, unitName, gold) {
   }
 
   map = M.updateIn(map, [vi, vj, 'units', typeName, 'gold'], (oldAmount) => {
-    return (oldAmount || 0) - gold;
+    return oldAmount - gold;
   });
 
   return M.assocIn(map, [di, dj, 'units', unitName], M.hashMap());
@@ -445,7 +445,7 @@ function move(map, destCoords, unitCoords) {
     let [type, typeName] = getMaybeVillage(map, vi, vj);
 
     map = M.updateIn(map, [vi, vj, 'units', typeName, 'wood'], (oldAmount) => {
-      return (oldAmount || 0) + 1;
+      return oldAmount + 1;
     });
   }
 
@@ -510,10 +510,10 @@ function move(map, destCoords, unitCoords) {
       var wood = M.getIn(map, [i, j, 'units', typeName, 'wood']);
 
       map = M.updateIn(map, [bi, bj, 'units', bestTypeName, 'gold'], oldAmount => {
-        return (oldAmount || 0) + gold;
+        return oldAmount + gold;
       });
       map = M.updateIn(map, [bi, bj, 'units', bestTypeName, 'wood'], oldAmount => {
-        return (oldAmount || 0) + wood;
+        return oldAmount + wood;
       });
       return dissocIn(map, [i, j, 'units', typeName]);
     }, map, villageToRegionSizeM);
@@ -560,12 +560,12 @@ var App = React.createClass({
       }
     });
 
-    setTimeout(() => {
-      this.setState({
-        map: setInitialVillagesGold(this.state.map, 70),
-        phase: 'treeGrowth',
-      });
-    }, 100);
+    // setTimeout(() => {
+    //   this.setState({
+    //     map: setInitialVillagesGold(this.state.map, 70),
+    //     phase: 'treeGrowth',
+    //   });
+    // }, 100);
 
     setTimeout(() => {
       this.setState({
@@ -707,10 +707,9 @@ var App = React.createClass({
           </Menu>
         );
       } else if (typeName2) {
-        // TODO: need default values
         var config = M.getIn(map, [i, j, 'units']);
-        var gold = M.getIn(config, [typeName2, 'gold']) || 0;
-        var wood = M.getIn(config, [typeName2, 'wood']) || 0;
+        var gold = M.getIn(config, [typeName2, 'gold']);
+        var wood = M.getIn(config, [typeName2, 'wood']);
         maybeMenu = (
           <Menu pos={[x, y]}>
             {getMenuItemsForVillage(typeName2, gold, wood, this.handleMenuItemClick)}
