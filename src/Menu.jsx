@@ -21,6 +21,7 @@ var MenuItem = React.createClass({
       width: w,
       backgroundRepeat: 'no-repeat',
       backgroundImage: disabled ? url(assetUrls.MenuItemDisabled) : url(assetUrls.MenuItem),
+      color: disabled ? 'gray' : 'black',
     };
 
     var innerS = {

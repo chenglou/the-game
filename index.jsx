@@ -41,14 +41,6 @@ function updateMap(map, coordsList, f) {
   }, map, coordsList);
 }
 
-function hashCoords([i, j]) {
-  return i + '|' + j;
-}
-
-function unhashCoords(coords) {
-  return coords.split('|').map(n => parseInt(n));
-}
-
 function getMaybeVillage(map, i, j) {
   var config = M.getIn(map, [i, j, 'units']);
 
@@ -162,41 +154,23 @@ function findRegion(map, i, j) {
 
   var color = M.getIn(map, [i, j, 'color']);
 
-  var visited = {};
+  var visited = M.set();
   var toVisit = [[i, j]];
 
   while (toVisit.length > 0) {
     var [i, j] = toVisit.pop();
     var unVisitedSameColorNeighbors = findNeighbors(map, i, j)
       .filter(([i, j]) => M.getIn(map, [i, j, 'color']) === color)
-      .filter(coords => !visited[hashCoords(coords)]);
+      .filter(([i, j]) => !M.get(visited, M.vector(i, j)));
 
-    unVisitedSameColorNeighbors.forEach(coords => {
-      visited[hashCoords(coords)] = true;
-      toVisit.push(coords);
+    unVisitedSameColorNeighbors.forEach(([i, j]) => {
+      visited = M.conj(visited, M.vector(i, j));
+      toVisit.push([i, j]);
     });
   }
 
-  return Object.keys(visited).map(unhashCoords);
+  return js(visited);
 }
-
-// region + outer ring (explore outside land)
-// function findOuterRegion(map, i, j) {
-//   var map = mapSeqToVec(map);
-
-//   var color = M.getIn(map, [i, j, 'color']);
-
-//   var coords = findRegion(map, i, j);
-//   var outers = coords.map(([i, j]) => {
-//     return findNeighbors(map, i, j).filter(([i, j]) => {
-//       return M.getIn(map, [i, j, 'color']) !== color;
-//     });
-//   });
-//   outers = [].concat.apply([], outers);
-//   debugger;
-
-//   return outers;
-// }
 
 function addIncome(map, turn) {
   var map = mapSeqToVec(map);
@@ -425,6 +399,12 @@ function newVillager(map, destCoords, villageCoords, unitName, gold) {
   return M.assocIn(map, [di, dj, 'units', unitName], M.hashMap());
 }
 
+function findVillageInRegion(map, region) {
+  return region.filter(([i, j]) => {
+    return getMaybeVillage(map, i, j)[0];
+  })[0];
+}
+
 function move(map, destCoords, unitCoords) {
   var [di, dj] = destCoords;
   var [ui, uj] = unitCoords;
@@ -456,15 +436,12 @@ function move(map, destCoords, unitCoords) {
     return map;
   }
 
-  // TODO: stop unit from moving again
   map = dissocIn(map, [di, dj, 'units', 'Tombstone']);
 
   if (hasTree) {
     map = dissocIn(map, [di, dj, 'units', 'Tree']);
 
-    let [vi, vj] = findRegion(map, ui, uj).filter(([i, j]) => {
-      return getMaybeVillage(map, i, j)[0];
-    })[0];
+    let [vi, vj] = findVillageInRegion(map, findRegion(map, ui, uj))
     let [type, typeName] = getMaybeVillage(map, vi, vj);
 
     map = M.updateIn(map, [vi, vj, 'units', typeName, 'wood'], (oldAmount) => {
@@ -491,53 +468,43 @@ function move(map, destCoords, unitCoords) {
 
   // might be joining 2/3 same-colored regions...
   if (destColor !== ownColor) {
-    var destSameColorNeighbors = findNeighbors(map, di, dj).filter(([i, j]) => {
-      return M.getIn(map, [i, j, 'color']) === ownColor;
-    });
-    var regions = destSameColorNeighbors.map(([i, j]) => {
-      return findRegion(map, i, j);
-    });
-    // TODO: could use a findVillageInRegion helper
-    var villages = regions.map((coordsList) => {
-      return coordsList.filter(([i, j]) => {
-        return getMaybeVillage(map, i, j)[0];
-      })[0];
-    });
+    var regions = findNeighbors(map, di, dj)
+      .filter(([i, j]) => M.getIn(map, [i, j, 'color']) === ownColor)
+      .map(([i, j]) => findRegion(map, i, j));
 
-    var villageToRegionSize = {};
-    villages.forEach((coords, n) => {
-      villageToRegionSize[hashCoords(coords)] = regions[n].length;
-    });
+    // will kill dupe villages
+    var villageToRegionSizeM = M.zipmap(
+      M.toClj(regions.map(region => findVillageInRegion(map, region))),
+      regions.map(region => region.length)
+    );
 
-    var distinctVillagesHashed = Object.keys(villageToRegionSize)
-    var bestVillageHashed = distinctVillagesHashed.reduce((hash1, hash2) => {
+    var bestVillagePack = M.reduce((pack1, pack2) => {
       // highest ranked village
-      var [i1, j1] = unhashCoords(hash1);
-      var [i2, j2] = unhashCoords(hash2);
+      var [[i1, j1], size1] = js(pack1);
+      var [[i2, j2], size2] = js(pack2);
       var typeName1 = getMaybeVillage(map, i1, j1)[1];
       var typeName2 = getMaybeVillage(map, i2, j2)[1];
       var rank1 = everyUnit.rank[typeName1];
       var rank2 = everyUnit.rank[typeName2];
 
       if (rank1 > rank2) {
-        return hash1;
+        return pack1;
       } else if (rank1 < rank2) {
-        return hash2;
+        return pack2;
       }
       // if same rank: biggest region village
-      return villageToRegionSize[hash1] > villageToRegionSize[hash2] ?
-        hash1 :
-        hash2;
-    }, distinctVillagesHashed[0]);
+      return size1 > size2 ? pack1 : pack2;
+    }, villageToRegionSizeM);
 
-    var [bi, bj] = unhashCoords(bestVillageHashed);
+    var [[bi, bj], size] = js(bestVillagePack);
     var bestTypeName = getMaybeVillage(map, bi, bj)[1];
 
-    distinctVillagesHashed.forEach(hash => {
-      if (hash === bestVillageHashed) {
-        return;
+    map = M.reduce((map, pack) => {
+      var [[i, j], size] = js(pack);
+      if (i === bi && j === bj) {
+        return map;
       }
-      var [i, j] = unhashCoords(hash);
+
       var typeName = getMaybeVillage(map, i, j)[1];
       var gold = M.getIn(map, [i, j, 'units', typeName, 'gold']);
       var wood = M.getIn(map, [i, j, 'units', typeName, 'wood']);
@@ -548,8 +515,8 @@ function move(map, destCoords, unitCoords) {
       map = M.updateIn(map, [bi, bj, 'units', bestTypeName, 'wood'], oldAmount => {
         return (oldAmount || 0) + wood;
       });
-      map = dissocIn(map, [i, j, 'units', typeName]);
-    });
+      return dissocIn(map, [i, j, 'units', typeName]);
+    }, map, villageToRegionSizeM);
 
     // claim land, mark color
     map = M.assocIn(map, [di, dj, 'color'], ownColor);
@@ -595,7 +562,7 @@ var App = React.createClass({
 
     setTimeout(() => {
       this.setState({
-        map: setInitialVillagesGold(this.state.map, 7),
+        map: setInitialVillagesGold(this.state.map, 70),
         phase: 'treeGrowth',
       });
     }, 100);
@@ -755,7 +722,7 @@ var App = React.createClass({
     return (
       <div>
         <div style={consoleS}>
-          <div>Phase: {phase}. Pending action: {pendingAction}</div>
+          <div>Phase: {phase}. Pending action: {pendingAction || 'none'}</div>
           <pre>
             {JSON.stringify(js(M.getIn(mapSeqToVec(map), hover)), null, 2)}
           </pre>
