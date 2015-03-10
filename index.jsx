@@ -13,6 +13,7 @@ var mapSeqToVec = require('./src/mapSeqToVec');
 var positioner = require('./src/map/positioner');
 var everyUnit = require('./src/everyUnit');
 var {pendingActions, immediateActions} = require('./src/actions');
+var Firebase = require('firebase');
 
 var map1 = require('./src/map/data/map1');
 
@@ -525,8 +526,9 @@ function setInitialVillagesGold(map, amount) {
 var App = React.createClass({
   getInitialState: function() {
     var map = clj(map1);
+    map = M.vector(M.vector());
     // TODO: remove
-    map = setInitialVillagesGold(map, 70);
+    // map = setInitialVillagesGold(map, 70);
 
     return {
       map: map,
@@ -536,6 +538,7 @@ var App = React.createClass({
       selectedCoords: null,
       pendingAction: null,
       showMenu: false,
+      firebaseRef: new Firebase('https://blistering-heat-9706.firebaseio.com/map'),
     };
   },
 
@@ -552,12 +555,15 @@ var App = React.createClass({
 
       var [[action, nextPhase], ...rest] = sequence;
       setTimeout(() => {
-        this.setState({
-          map: action(this.state.map),
-          phase: nextPhase,
-        });
+        var {map, firebaseRef} = this.state;
 
-        doStep(rest);
+        this.setState({
+          map: action(map),
+          phase: nextPhase,
+        }, () => {
+          firebaseRef.set(JSON.stringify(js(map)));
+          doStep(rest);
+        });
       }, 300);
     };
 
@@ -572,14 +578,35 @@ var App = React.createClass({
   },
 
   componentDidMount: function() {
+    this.state.firebaseRef.once('value', (dataSnapshot) => {
+      this.setState({
+        map: clj(JSON.parse(dataSnapshot.val())),
+      }, () => this.repeatCycle('Red'));
+    });
+
+    this.state.firebaseRef.on('value', (dataSnapshot) => {
+      var newMap = clj(JSON.parse(dataSnapshot.val()));
+      // careful about infinite recursive calls
+      if (M.equals(this.state.map, newMap)) {
+        return;
+      }
+
+      this.setState({
+        map: newMap,
+      });
+    });
+
     window.addEventListener('keydown', (e) => {
       // escape
       if (e.which === 27) {
         this.setState(cancelPendingActionState);
       }
     });
+  },
 
-    this.repeatCycle('Red');
+  // for testing purposes, reset firebase map data
+  handleResetGame: function() {
+    this.state.firebaseRef.set(JSON.stringify(map1));
   },
 
   handleDoneClick: function() {
@@ -612,7 +639,7 @@ var App = React.createClass({
   },
 
   handleTileMouseDown: function(i, j) {
-    var {map, pendingAction, selectedCoords, phase, turn} = this.state;
+    var {map, pendingAction, selectedCoords, phase, turn, firebaseRef} = this.state;
 
     var destColor = M.getIn(map, [i, j, 'color']);
     if (phase !== 'moveAndPurchase' || (!pendingAction && destColor !== turn)) {
@@ -704,6 +731,7 @@ var App = React.createClass({
     return (
       <div>
         {maybeDoneClick}
+        <div onClick={this.handleResetGame}>Reset Game</div>
         <div style={consoleS}>
           <div>
             Phase: {phase}. Pending action: {pendingAction || 'none'}. Turn: {turn || 'none'}
