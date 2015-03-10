@@ -10,8 +10,18 @@ var Fort = React.createClass({
   },
 
   render: function() {
+    var {gold, wood} = this.props;
+
+    var s = {
+      margin: 'auto',
+      zIndex: 100,
+    };
+
     return (
       <UnitWrapper unitName="Fort">
+        <div style={s}>
+          {gold + ', ' + wood}
+        </div>
       </UnitWrapper>
     );
   }

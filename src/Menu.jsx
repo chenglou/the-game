@@ -51,6 +51,7 @@ var Menu = React.createClass({
       top: y + 50,
       left: x + 50,
       zIndex: 101,
+      boxShadow: '0px 0px 10px 0px gray',
     };
 
     return (

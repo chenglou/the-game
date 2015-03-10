@@ -1,3 +1,5 @@
+'use strict';
+
 var React = require('react');
 var Grid = require('./src/map/Grid');
 var {Menu, MenuItem} = require('./src/Menu');
@@ -9,21 +11,22 @@ var findNeighbors = require('./src/findNeighbors');
 var mapSeqToVec = require('./src/mapSeqToVec');
 var positioner = require('./src/map/positioner');
 var everyUnit = require('./src/everyUnit');
+var {pendingActions, immediateActions} = require('./src/actions');
 
 var map1 = require('./src/map/data/map1');
 
 var js = M.toJs;
 var clj = M.toClj;
 
-// handy, see usage
+// hand-rolled currying
 function add(x) {
   return function(y) {
     return x + y;
-  }
+  };
 }
 
 function filterMap(map, f) {
-  var map = mapSeqToVec(map);
+  map = mapSeqToVec(map);
 
   return M.mapcat((row, i) => {
     var maybeCoords = M.map((cell, j) => {
@@ -100,12 +103,13 @@ function setInitialVillagesGold(map, amount) {
   return updateMap(map, villageCoords, (cell, i, j) => {
     var [type, typeName] = getMaybeVillage(map, i, j);
 
+    cell = M.updateIn(cell, ['units', typeName, 'wood'], add(amount));
     return M.updateIn(cell, ['units', typeName, 'gold'], add(amount));
   });
 }
 
 function growTrees(map) {
-  var map = mapSeqToVec(map);
+  map = mapSeqToVec(map);
 
   var treeCoords = filterMap(map, (cell) => M.getIn(cell, ['units', 'Tree']));
   treeCoords = M.filter(() => Math.random() > 0.5, treeCoords);
@@ -163,7 +167,7 @@ function matureBuilt(map, turn, unitName) {
 }
 
 function findRegion(map, i, j) {
-  var map = mapSeqToVec(map);
+  map = mapSeqToVec(map);
 
   var color = M.getIn(map, [i, j, 'color']);
 
@@ -171,7 +175,7 @@ function findRegion(map, i, j) {
   var toVisit = [[i, j]];
 
   while (toVisit.length > 0) {
-    var [i, j] = toVisit.pop();
+    let [i, j] = toVisit.pop();
     var unVisitedSameColorNeighbors = findNeighbors(map, i, j)
       .filter(([i, j]) => M.getIn(map, [i, j, 'color']) === color)
       .filter(([i, j]) => !M.get(visited, M.vector(i, j)));
@@ -186,7 +190,7 @@ function findRegion(map, i, j) {
 }
 
 function addIncome(map, turn) {
-  var map = mapSeqToVec(map);
+  map = mapSeqToVec(map);
 
   var villageCoords = filterMapByColor(map, turn, (cell, i, j) => {
     return getMaybeVillage(map, i, j)[0];
@@ -212,7 +216,7 @@ function addIncome(map, turn) {
 }
 
 function payTime(map, turn) {
-  var map = mapSeqToVec(map);
+  map = mapSeqToVec(map);
 
   var villageCoords = filterMapByColor(map, turn, (cell, i, j) => {
     return getMaybeVillage(map, i, j)[0];
@@ -237,7 +241,7 @@ function payTime(map, turn) {
 }
 
 function dieTime(map, turn) {
-  var map = mapSeqToVec(map);
+  map = mapSeqToVec(map);
 
   var villageCoords = filterMapByColor(map, turn, (cell, i, j) => {
     return getMaybeVillage(map, i, j)[0];
@@ -279,7 +283,7 @@ function dieTime(map, turn) {
 }
 
 function payOrDie(map, turn) {
-  var map = mapSeqToVec(map);
+  map = mapSeqToVec(map);
 
   map = payTime(map, turn);
   return dieTime(map, turn);
@@ -288,33 +292,7 @@ function payOrDie(map, turn) {
 // -------------------------- phases over
 
 function getMenuItemsForVillage(typeName, gold, wood, cb) {
-  var items;
-  if (typeName === 'Hovel') {
-    items = [
-      ['New Peasant', 'newPeasant', 10, 0],
-      ['New Infantry', 'newInfantry', 20, 0],
-      ['Upgrade to Town', 'upgradeToTown', 0, 8],
-    ];
-  } else if (typeName === 'Town') {
-    items = [
-      ['New Peasant', 'newPeasant', 10, 0],
-      ['New Infantry', 'newInfantry', 20, 0],
-      ['New Soldier', 'newSoldier', 30, 0],
-      ['New Watchtower', 'newWatchtower', 0, 5],
-      ['Upgrade to Fort', 'upgradeToFort', 0, 8],
-    ];
-  } else if (typeName === 'Fort') {
-    items = [
-      ['New Peasant', 'newPeasant', 10, 0],
-      ['New Infantry', 'newInfantry', 20, 0],
-      ['New Soldier', 'newSoldier', 30, 0],
-      ['New Knight', 'newKnight', 40, 0],
-      ['New Watchtower', 'newWatchtower', 0, 5],
-      ['Upgrade to Fort', 'upgradeToFort', 0, 8],
-    ];
-  }
-
-  return items.map(([desc, action, goldReq, woodReq]) => {
+  return pendingActions.Village[typeName].map(([desc, action, goldReq, woodReq]) => {
     if (gold >= goldReq && wood >= woodReq) {
       return (
         <MenuItem key={action} onClick={cb.bind(null, action)} disabled={false}>
@@ -346,34 +324,8 @@ function getMenuItemsForVillager(typeName, {hasMoved, cooldown}, cb) {
       </MenuItem>
     ];
   }
-  var items;
-  if (typeName === 'Peasant') {
-    items = [
-      // can't invade
-      ['Move', 'move'],
-      ['Cultivate Meadow', 'cultivateMeadow'],
-      ['Build Road', 'buildRoad'],
-    ];
-  } else if (typeName === 'Infantry') {
-    items = [
-      ['Move', 'move'],
-      ['Kill', 'kill'],
-    ];
-  } else if (typeName === 'Soldier') {
-    items = [
-      // tramples meadow unless there's a road
-      ['Move', 'move'],
-      ['Kill', 'kill'],
-    ];
-  } else if (typeName === 'Knight') {
-    items = [
-      // can't move into tree, etc. tramples meadow unless road
-      ['Move', 'move'],
-      ['Kill', 'kill'],
-    ];
-  }
 
-  return items.map(([desc, action]) => {
+  return pendingActions.Villager[typeName].map(([desc, action]) => {
     return (
       <MenuItem key={action} onClick={cb.bind(null, action)} disabled={false}>
         {desc}
@@ -382,9 +334,11 @@ function getMenuItemsForVillager(typeName, {hasMoved, cooldown}, cb) {
   });
 }
 
-// state returners
+// ---------------- state returners
 
 function newVillager(map, destCoords, villageCoords, unitName, gold) {
+  map = mapSeqToVec(map);
+
   var [di, dj] = destCoords;
   var [vi, vj] = villageCoords;
 
@@ -413,6 +367,8 @@ function findVillageInRegion(map, region) {
 }
 
 function move(map, [di, dj], [ui, uj]) {
+  map = mapSeqToVec(map);
+
   var [type, typeName] = getMaybeVillager(map, ui, uj);
   var destConfig = M.getIn(map, [di, dj]);
   var destColor = M.get(destConfig, 'color');
@@ -427,6 +383,8 @@ function move(map, [di, dj], [ui, uj]) {
 
   var hasTree = M.getIn(destConfig, ['units', 'Tree']);
   var hasTombstone = M.getIn(destConfig, ['units', 'Tombstone']);
+  var hasMeadow = M.getIn(destConfig, ['units', 'Meadow']);
+  var hasRoad = M.getIn(destConfig, ['units', 'Road']);
 
   // only knight can't gather wood & clear tombstone
   if (typeName === 'Knight' && (hasTree || hasTombstone)) {
@@ -445,7 +403,7 @@ function move(map, [di, dj], [ui, uj]) {
   if (hasTree) {
     map = dissocIn(map, [di, dj, 'units', 'Tree']);
 
-    let [vi, vj] = findVillageInRegion(map, findRegion(map, ui, uj))
+    let [vi, vj] = findVillageInRegion(map, findRegion(map, ui, uj));
     let [type, typeName] = getMaybeVillage(map, vi, vj);
 
     map = M.updateIn(map, [vi, vj, 'units', typeName, 'wood'], add(1));
@@ -472,7 +430,7 @@ function move(map, [di, dj], [ui, uj]) {
       .map(([i, j]) => findRegion(map, i, j));
 
     // will kill dupe villages
-    var villageToRegionSizeM = M.zipmap(
+    var villageToRegionSize = M.zipmap(
       clj(regions.map(region => findVillageInRegion(map, region))),
       regions.map(region => region.length)
     );
@@ -493,7 +451,7 @@ function move(map, [di, dj], [ui, uj]) {
       }
       // if same rank: biggest region village
       return size1 > size2 ? pack1 : pack2;
-    }, villageToRegionSizeM);
+    }, villageToRegionSize);
 
     var [[bi, bj], size] = js(bestVillagePack);
     var bestTypeName = getMaybeVillage(map, bi, bj)[1];
@@ -511,7 +469,7 @@ function move(map, [di, dj], [ui, uj]) {
       map = M.updateIn(map, [bi, bj, 'units', bestTypeName, 'gold'], add(gold));
       map = M.updateIn(map, [bi, bj, 'units', bestTypeName, 'wood'], add(wood));
       return dissocIn(map, [i, j, 'units', typeName]);
-    }, map, villageToRegionSizeM);
+    }, map, villageToRegionSize);
 
     // claim land, mark color
     map = M.assocIn(map, [di, dj, 'color'], ownColor);
@@ -524,6 +482,19 @@ function move(map, [di, dj], [ui, uj]) {
   var unit = M.getIn(map, [ui, uj, 'units', typeName]);
   map = dissocIn(map, [ui, uj, 'units', typeName]);
   return M.assocIn(map, [di, dj, 'units', typeName], unit);
+}
+
+function upgradeVillage(map, [i, j]) {
+  // TODO: tired of this pattern
+  map = mapSeqToVec(map);
+
+  var [type, typeName] = getMaybeVillage(map, i, j);
+  // TODO: prolly belongs somewhere else
+  var newTypeName = typeName === 'Hovel' ? 'Town' : 'Fort';
+  var newType = M.updateIn(type, ['wood'], add(-8));
+
+  map = dissocIn(map, [i, j, 'units', typeName]);
+  return M.assocIn(map, [i, j, 'units', newTypeName], newType);
 }
 
 // -------------------------- menu actions over
@@ -607,10 +578,26 @@ var App = React.createClass({
   },
 
   handleMenuItemClick: function(action) {
-    this.setState({
-      pendingAction: action,
-      showMenu: false,
-    });
+    var {map, selectedCoords} = this.state;
+
+    if (!immediateActions[action]) {
+      this.setState({
+        pendingAction: action,
+        showMenu: false,
+      });
+      return;
+    }
+
+    if (action === 'upgradeVillage') {
+      this.setState({
+        ...cancelPendingActionState,
+        map: upgradeVillage(map, selectedCoords),
+      });
+    } else if (action === 'cultivateMeadow') {
+      //
+    } else if (action === 'buildRoad') {
+      //
+    }
   },
 
   handleTileMouseDown: function(i, j) {
@@ -647,13 +634,6 @@ var App = React.createClass({
         ...cancelPendingActionState,
         map: newVillager(map, [i, j], selectedCoords, 'Knight', 40),
       });
-    } else if (pendingAction === 'upgradeToTown') {
-      this.setState({
-        ...cancelPendingActionState,
-        map: newVillager(map, [i, j], selectedCoords, 'Knight', 40),
-      });
-    } else if (pendingAction === 'upgradeToFort') {
-      //
     } else if (pendingAction === 'move') {
       // assume `selectedCoords` to be unit coordinates
       this.setState({
