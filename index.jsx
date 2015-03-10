@@ -615,7 +615,7 @@ var App = React.createClass({
     var {map, pendingAction, selectedCoords, phase, turn} = this.state;
 
     var destColor = M.getIn(map, [i, j, 'color']);
-    if (phase !== 'moveAndPurchase' || destColor !== turn) {
+    if (phase !== 'moveAndPurchase' || (!pendingAction && destColor !== turn)) {
       this.setState(cancelPendingActionState);
       return;
     }
@@ -629,39 +629,23 @@ var App = React.createClass({
       return;
     }
 
+    var newMap;
     if (pendingAction === 'newPeasant') {
-      // assume `selectedCoords` to be village coordinates
-      // assume enough gold (otherwise menu itema disabled in render)
-      this.setState({
-        ...cancelPendingActionState,
-        map: newVillager(map, [i, j], selectedCoords, 'Peasant', 10),
-      });
+        newMap = newVillager(map, [i, j], selectedCoords, 'Peasant', 10);
     } else if (pendingAction === 'newInfantry') {
-      this.setState({
-        ...cancelPendingActionState,
-        map: newVillager(map, [i, j], selectedCoords, 'Infantry', 20),
-      });
+        newMap = newVillager(map, [i, j], selectedCoords, 'Infantry', 20);
     } else if (pendingAction === 'newSoldier') {
-      this.setState({
-        ...cancelPendingActionState,
-        map: newVillager(map, [i, j], selectedCoords, 'Soldier', 30),
-      });
+        newMap = newVillager(map, [i, j], selectedCoords, 'Soldier', 30);
     } else if (pendingAction === 'newKnight') {
-      this.setState({
-        ...cancelPendingActionState,
-        map: newVillager(map, [i, j], selectedCoords, 'Knight', 40),
-      });
+        newMap = newVillager(map, [i, j], selectedCoords, 'Knight', 40);
     } else if (pendingAction === 'move') {
-      // assume `selectedCoords` to be unit coordinates
-      this.setState({
-        ...cancelPendingActionState,
-        map: move(map, [i, j], selectedCoords),
-      });
-    } else if (pendingAction === 'cultivateMeadow') {
-      // TODO: this
-    } else {
-      throw 'umimplemented ' + pendingAction;
+        newMap = move(map, [i, j], selectedCoords);
     }
+
+    this.setState({
+      ...cancelPendingActionState,
+      map: newMap,
+    }, () => firebaseRef.set(JSON.stringify(js(this.state.map))));
   },
 
   handleTileHover: function(i, j) {
