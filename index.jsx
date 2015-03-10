@@ -7,6 +7,7 @@ var M = require('mori');
 var coexistances = require('./src/coexistances');
 var dissocIn = require('./src/utils/dissocIn');
 var randNth = require('./src/utils/randNth');
+var add = require('./src/utils/add');
 var findNeighbors = require('./src/findNeighbors');
 var mapSeqToVec = require('./src/mapSeqToVec');
 var positioner = require('./src/map/positioner');
@@ -17,13 +18,6 @@ var map1 = require('./src/map/data/map1');
 
 var js = M.toJs;
 var clj = M.toClj;
-
-// hand-rolled currying
-function add(x) {
-  return function(y) {
-    return x + y;
-  };
-}
 
 function filterMap(map, f) {
   map = mapSeqToVec(map);
@@ -95,17 +89,11 @@ function canCoexist(map, unitName, i, j) {
 
 // ----------- phases
 
-function setInitialVillagesGold(map, amount) {
-  var villageCoords = filterMap(map, (cell, i, j) => {
-    return getMaybeVillage(map, i, j)[0];
-  });
+function killGrayMeadowCooldowns(map) {
+  // TODO: use
 
-  return updateMap(map, villageCoords, (cell, i, j) => {
-    var [type, typeName] = getMaybeVillage(map, i, j);
-
-    cell = M.updateIn(cell, ['units', typeName, 'wood'], add(amount));
-    return M.updateIn(cell, ['units', typeName, 'gold'], add(amount));
-  });
+  // peasant cultivateMeadow, enemy disconnects territory, meadow gray, never
+  // matures
 }
 
 function growTrees(map) {
@@ -295,7 +283,7 @@ function getMenuItemsForVillage(typeName, gold, wood, cb) {
   return pendingActions.Village[typeName].map(([desc, action, goldReq, woodReq]) => {
     if (gold >= goldReq && wood >= woodReq) {
       return (
-        <MenuItem key={action} onClick={cb.bind(null, action)} disabled={false}>
+        <MenuItem key={action} onClick={cb.bind(null, action)}>
           {desc}
         </MenuItem>
       );
@@ -336,6 +324,23 @@ function getMenuItemsForVillager(typeName, {hasMoved, cooldown}, cb) {
 
 // ---------------- state returners
 
+function mayebTrampleOnMeadow(map, unitName, [i, j]) {
+  map = mapSeqToVec(map);
+
+  var hasMeadow = M.getIn(map, [i, j, 'units', 'Meadow']);
+  var hasRoadWith0Cooldown =
+    M.getIn(map, [i, j, 'units', 'Road', 'cooldown']) === 0;
+
+  // trample like an asshole
+  if ((unitName === 'Knight' || unitName === 'Soldier') &&
+      hasMeadow &&
+      !hasRoadWith0Cooldown) {
+    map = dissocIn(map, [i, j, 'units', 'Meadow']);
+  }
+
+  return map;
+}
+
 function newVillager(map, [di, dj], [vi, vj], unitName, gold) {
   map = mapSeqToVec(map);
 
@@ -362,23 +367,6 @@ function findVillageInRegion(map, region) {
   return region.filter(([i, j]) => {
     return getMaybeVillage(map, i, j)[0];
   })[0];
-}
-
-function mayebTrampleOnMeadow(map, unitName, [i, j]) {
-  map = mapSeqToVec(map);
-
-  var hasMeadow = M.getIn(map, [i, j, 'units', 'Meadow']);
-  var hasRoadWith0Cooldown =
-    M.getIn(map, [i, j, 'units', 'Road', 'cooldown']) === 0;
-
-  // trample like an asshole
-  if ((unitName === 'Knight' || unitName === 'Soldier') &&
-      hasMeadow &&
-      !hasRoadWith0Cooldown) {
-    map = dissocIn(map, [i, j, 'units', 'Meadow'])
-  }
-
-  return map;
 }
 
 function move(map, [di, dj], [ui, uj]) {
@@ -520,17 +508,67 @@ var cancelPendingActionState = {
   showMenu: false,
 };
 
+// test helper
+function setInitialVillagesGold(map, amount) {
+  var villageCoords = filterMap(map, (cell, i, j) => {
+    return getMaybeVillage(map, i, j)[0];
+  });
+
+  return updateMap(map, villageCoords, (cell, i, j) => {
+    var [type, typeName] = getMaybeVillage(map, i, j);
+
+    cell = M.updateIn(cell, ['units', typeName, 'wood'], add(amount));
+    return M.updateIn(cell, ['units', typeName, 'gold'], add(amount));
+  });
+}
+
 var App = React.createClass({
   getInitialState: function() {
+    var map = clj(map1);
+    // TODO: remove
+    map = setInitialVillagesGold(map, 70);
+
     return {
+      map: map,
       hover: [0, 0],
-      map: clj(map1),
       turn: 'Red',
       phase: 'initGame',
       selectedCoords: null,
       pendingAction: null,
       showMenu: false,
     };
+  },
+
+  repeatCycle: function(turn) {
+    this.setState({
+      turn: turn,
+      phase: 'treeGrowth',
+    });
+
+    let doStep = (sequence) => {
+      if (sequence.length === 0) {
+        return;
+      }
+
+      var [[action, nextPhase], ...rest] = sequence;
+      setTimeout(() => {
+        this.setState({
+          map: action(this.state.map),
+          phase: nextPhase,
+        });
+
+        doStep(rest);
+      }, 300);
+    };
+
+    doStep([
+      [map => growTrees(map), 'resetUnitMoves'],
+      [map => resetUnitMoves(map, turn), 'tombstone'],
+      [map => tombstonesToTrees(map, turn), 'build'],
+      [map => matureTiles(map, turn), 'income'],
+      [map => addIncome(map, turn), 'payment'],
+      [map => payOrDie(map, turn), 'moveAndPurchase'],
+    ]);
   },
 
   componentDidMount: function() {
@@ -541,55 +579,13 @@ var App = React.createClass({
       }
     });
 
-    setTimeout(() => {
-      this.setState({
-        map: setInitialVillagesGold(this.state.map, 70),
-        phase: 'treeGrowth',
-      });
-    }, 100);
+    this.repeatCycle('Red');
+  },
 
-    setTimeout(() => {
-      this.setState({
-        map: growTrees(this.state.map, this.state.turn),
-        phase: 'resetUnitMoves',
-      });
-    }, 500);
-
-    // player phase specific. each player round, not each total round
-    setTimeout(() => {
-      this.setState({
-        map: resetUnitMoves(this.state.map, this.state.turn),
-        phase: 'tombstone',
-      });
-    }, 750);
-
-    setTimeout(() => {
-      this.setState({
-        map: tombstonesToTrees(this.state.map, this.state.turn),
-        phase: 'build',
-      });
-    }, 1000);
-
-    setTimeout(() => {
-      this.setState({
-        map: matureTiles(this.state.map, this.state.turn),
-        phase: 'income',
-      });
-    }, 1100);
-
-    setTimeout(() => {
-      this.setState({
-        map: addIncome(this.state.map, this.state.turn),
-        phase: 'payment',
-      });
-    }, 1300);
-
-    setTimeout(() => {
-      this.setState({
-        map: payOrDie(this.state.map, this.state.turn),
-        phase: 'moveAndPurchase',
-      });
-    }, 1600);
+  handleDoneClick: function() {
+    this.setState(cancelPendingActionState, () => {
+      this.repeatCycle(this.state.turn === 'Red' ? 'Blue' : 'Red');
+    });
   },
 
   handleMenuItemClick: function(action) {
@@ -616,7 +612,13 @@ var App = React.createClass({
   },
 
   handleTileMouseDown: function(i, j) {
-    var {map, pendingAction, selectedCoords} = this.state;
+    var {map, pendingAction, selectedCoords, phase, turn} = this.state;
+
+    var destColor = M.getIn(map, [i, j, 'color']);
+    if (phase !== 'moveAndPurchase' || destColor !== turn) {
+      this.setState(cancelPendingActionState);
+      return;
+    }
 
     if (!pendingAction) {
       this.setState({
@@ -669,8 +671,7 @@ var App = React.createClass({
   },
 
   render: function() {
-    var state = this.state;
-    var {hover, selectedCoords, map, phase, pendingAction, showMenu} = state;
+    var {hover, selectedCoords, map, phase, pendingAction, showMenu, turn} = this.state;
 
     var gridWrapper = {
       border: '1px solid black',
@@ -711,11 +712,19 @@ var App = React.createClass({
       }
     }
 
+    var maybeDoneClick;
+    if (phase === 'moveAndPurchase') {
+      maybeDoneClick = <div onClick={this.handleDoneClick}>Done</div>;
+    }
+
     return (
       <div>
+        {maybeDoneClick}
         <div style={consoleS}>
-          <div>Phase: {phase}. Pending action: {pendingAction || 'none'}</div>
-          <pre>
+          <div>
+            Phase: {phase}. Pending action: {pendingAction || 'none'}. Turn: {turn || 'none'}
+          </div>
+          <pre style={{fontSize: 12}}>
             {JSON.stringify(js(M.getIn(mapSeqToVec(map), hover)), null, 2)}
           </pre>
         </div>
