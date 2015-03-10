@@ -336,11 +336,8 @@ function getMenuItemsForVillager(typeName, {hasMoved, cooldown}, cb) {
 
 // ---------------- state returners
 
-function newVillager(map, destCoords, villageCoords, unitName, gold) {
+function newVillager(map, [di, dj], [vi, vj], unitName, gold) {
   map = mapSeqToVec(map);
-
-  var [di, dj] = destCoords;
-  var [vi, vj] = villageCoords;
 
   var clickedInRegion = findRegion(map, vi, vj)
     .some(([i2, j2]) => di === i2 && dj === j2);
@@ -349,8 +346,9 @@ function newVillager(map, destCoords, villageCoords, unitName, gold) {
     return map;
   }
 
-  var [type, typeName] = getMaybeVillage(map, vi, vj);
+  map = mayebTrampleOnMeadow(map, unitName, [di, dj]);
 
+  var [type, typeName] = getMaybeVillage(map, vi, vj);
   map = M.updateIn(map, [vi, vj, 'units', typeName, 'gold'], add(-gold));
 
   return M.assocIn(
@@ -364,6 +362,23 @@ function findVillageInRegion(map, region) {
   return region.filter(([i, j]) => {
     return getMaybeVillage(map, i, j)[0];
   })[0];
+}
+
+function mayebTrampleOnMeadow(map, unitName, [i, j]) {
+  map = mapSeqToVec(map);
+
+  var hasMeadow = M.getIn(map, [i, j, 'units', 'Meadow']);
+  var hasRoadWith0Cooldown =
+    M.getIn(map, [i, j, 'units', 'Road', 'cooldown']) === 0;
+
+  // trample like an asshole
+  if ((unitName === 'Knight' || unitName === 'Soldier') &&
+      hasMeadow &&
+      !hasRoadWith0Cooldown) {
+    map = dissocIn(map, [i, j, 'units', 'Meadow'])
+  }
+
+  return map;
 }
 
 function move(map, [di, dj], [ui, uj]) {
@@ -383,8 +398,6 @@ function move(map, [di, dj], [ui, uj]) {
 
   var hasTree = M.getIn(destConfig, ['units', 'Tree']);
   var hasTombstone = M.getIn(destConfig, ['units', 'Tombstone']);
-  var hasMeadow = M.getIn(destConfig, ['units', 'Meadow']);
-  var hasRoad = M.getIn(destConfig, ['units', 'Road']);
 
   // only knight can't gather wood & clear tombstone
   if (typeName === 'Knight' && (hasTree || hasTombstone)) {
@@ -422,6 +435,8 @@ function move(map, [di, dj], [ui, uj]) {
   if (hasTree || hasTombstone || destColor !== ownColor) {
     map = M.assocIn(map, [ui, uj, 'units', typeName, 'hasMoved'], true);
   }
+
+  map = mayebTrampleOnMeadow(map, typeName, [di, dj]);
 
   // might be joining 2/3 same-colored regions...
   if (destColor !== ownColor) {
