@@ -1,5 +1,6 @@
 var React = require('react');
 var UnitWrapper = require('./UnitWrapper');
+var Badge = require('../map/Badge');
 
 var p = React.PropTypes;
 
@@ -12,16 +13,11 @@ var Fort = React.createClass({
   render: function() {
     var {gold, wood} = this.props;
 
-    var s = {
-      margin: 'auto',
-      zIndex: 100,
-    };
-
     return (
       <UnitWrapper unitName="Fort">
-        <div style={s}>
-          {gold + ', ' + wood}
-        </div>
+        <Badge notice={true}>
+          {gold + ' / ' + wood}
+        </Badge>
       </UnitWrapper>
     );
   }

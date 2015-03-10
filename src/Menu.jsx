@@ -8,7 +8,7 @@ var p = React.PropTypes;
 var MenuItem = React.createClass({
   propTypes: {
     children: p.string.isRequired,
-    disabled: p.bool.isRequired,
+    disabled: p.bool,
   },
 
   render: function() {
