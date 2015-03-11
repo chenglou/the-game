@@ -1,4 +1,5 @@
-out
+public/out
 node_modules
 *.log
 bower_components
+bin
