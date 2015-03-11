@@ -532,6 +532,7 @@ var App = React.createClass({
 
     return {
       map: map,
+      history: [],
       hover: [0, 0],
       turn: 'Red',
       phase: 'initGame',
@@ -555,13 +556,15 @@ var App = React.createClass({
 
       var [[action, nextPhase], ...rest] = sequence;
       setTimeout(() => {
-        var {map, firebaseRef} = this.state;
+        var {map, firebaseRef, history} = this.state;
 
+        var newMap = action(map);
         this.setState({
-          map: action(map),
+          map: newMap,
           phase: nextPhase,
+          history: history.concat([newMap]),
         }, () => {
-          firebaseRef.set(JSON.stringify(js(map)));
+          firebaseRef.set(JSON.stringify(js(newMap)));
           doStep(rest);
         });
       }, 300);
@@ -579,20 +582,24 @@ var App = React.createClass({
 
   componentDidMount: function() {
     this.state.firebaseRef.once('value', (dataSnapshot) => {
+      var newMap = clj(JSON.parse(dataSnapshot.val()));
       this.setState({
-        map: clj(JSON.parse(dataSnapshot.val())),
+        history: [newMap],
+        map: newMap,
       }, () => this.repeatCycle('Red'));
     });
 
     this.state.firebaseRef.on('value', (dataSnapshot) => {
+      var {map, history} = this.state;
       var newMap = clj(JSON.parse(dataSnapshot.val()));
       // careful about infinite recursive calls
-      if (M.equals(this.state.map, newMap)) {
+      if (M.equals(map, newMap)) {
         return;
       }
 
       this.setState({
         map: newMap,
+        history: history.concat([newMap]),
       });
     });
 
@@ -607,6 +614,14 @@ var App = React.createClass({
   // for testing purposes, reset firebase map data
   handleResetGame: function() {
     this.state.firebaseRef.set(JSON.stringify(map1));
+  },
+
+  handleRangeChange: function(e) {
+    var value = parseInt(e.target.value);
+    this.setState({
+      historyIndex: value,
+      map: this.state.history[value],
+    });
   },
 
   handleDoneClick: function() {
@@ -639,7 +654,7 @@ var App = React.createClass({
   },
 
   handleTileMouseDown: function(i, j) {
-    var {map, pendingAction, selectedCoords, phase, turn, firebaseRef} = this.state;
+    var {map, pendingAction, selectedCoords, phase, turn, firebaseRef, history} = this.state;
 
     var destColor = M.getIn(map, [i, j, 'color']);
     if (phase !== 'moveAndPurchase' || (!pendingAction && destColor !== turn)) {
@@ -672,7 +687,8 @@ var App = React.createClass({
     this.setState({
       ...cancelPendingActionState,
       map: newMap,
-    }, () => firebaseRef.set(JSON.stringify(js(this.state.map))));
+      history: history.concat([newMap]),
+    }, () => firebaseRef.set(JSON.stringify(js(newMap))));
   },
 
   handleTileHover: function(i, j) {
@@ -682,7 +698,17 @@ var App = React.createClass({
   },
 
   render: function() {
-    var {hover, selectedCoords, map, phase, pendingAction, showMenu, turn} = this.state;
+    var {
+      hover,
+      selectedCoords,
+      map,
+      phase,
+      pendingAction,
+      showMenu,
+      turn,
+      history,
+      historyIndex,
+    } = this.state;
 
     var gridWrapper = {
       border: '1px solid black',
@@ -730,6 +756,15 @@ var App = React.createClass({
 
     return (
       <div>
+        <input
+          type="range"
+          value={historyIndex}
+          onChange={this.handleRangeChange}
+          min={0}
+          max={history.length - 1} />
+        max: {history.length - 1}
+        current: {historyIndex}
+
         {maybeDoneClick}
         <div onClick={this.handleResetGame}>Reset Game</div>
         <div style={consoleS}>

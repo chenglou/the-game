@@ -6,8 +6,6 @@ module.exports = {
   entry: {
     index: './public/index.jsx',
     editor: './public/src/meta/mapEditor.jsx',
-    login: './public/login.jsx',
-    register: './public/registration.jsx'
   },
   output: {
     path: './public/out',
