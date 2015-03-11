@@ -4,11 +4,13 @@ var commonsPlugin = new webpack.optimize.CommonsChunkPlugin('common.js');
 
 module.exports = {
   entry: {
-    index: './index.jsx',
-    editor: './src/meta/mapEditor.jsx',
+    index: './public/index.jsx',
+    editor: './public/src/meta/mapEditor.jsx',
+    login: './public/login.jsx',
+    register: './public/registration.jsx'
   },
   output: {
-    path: './out',
+    path: './public/out',
     filename: '[name].js',
   },
   plugins: [commonsPlugin],

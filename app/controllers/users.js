@@ -87,7 +87,7 @@ exports.create = function(req, res, next) {
         }
         req.logIn(user, function(err) {
             if (err) return next(err);
-            return res.redirect('/');
+            return res.jsonp(user);
         });
         res.status(200);
     });
@@ -133,29 +133,6 @@ exports.update = function(req, res) {
     });
 };
 
-/**
- * insert a transaction
- */
-exports.insertTransaction = function (transaction, callback) {
-    User.findOne({
-        _id: transaction.user
-    })
-    .exec(function (err, user) {
-        if (err || !user)
-        {
-            return callback(err, null);
-        } 
-        user.ticket_transactions.push({
-            transaction: transaction
-        });
-        user.save(function (err, user) {
-            if (err || !user) {
-                return callback(err, null);
-            }
-            return callback(null, user);
-        });
-    });
-};
 
 /**
  *  Create a random user with only emails, return the newly created user or the existing one

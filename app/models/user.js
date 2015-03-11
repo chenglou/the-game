@@ -27,30 +27,6 @@ var UserSchema = new Schema({
     provider: String,
     salt: String,
     facebook: {},
-    twitter: {},
-    github: {},
-    google: {},
-    linkedin: {},
-
-    /* payment profile start */
-    payment_methods: [/*tokens from stripe*/],
-    /* transaction history start */
-    /*token_transactions: [{
-        card: {
-            type: Schema.ObjectId,
-            ref: 'Payment'
-        },
-        amount: {
-            type: Number,
-            default: 0
-        }
-    }],*/
-    ticket_transactions: [{
-        transaction: {
-            type: Schema.ObjectId,
-            ref: 'Transaction'
-        }
-    }]
 });
 
 /**
