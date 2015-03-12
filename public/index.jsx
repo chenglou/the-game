@@ -532,20 +532,21 @@ function setInitialVillagesGold(map, amount) {
 
 var App = React.createClass({
   getInitialState: function() {
-    var map = clj(map1);
-    map = M.vector(M.vector());
+    var map = M.vector(M.vector());
     // TODO: remove
     // map = setInitialVillagesGold(map, 70);
 
     return {
       map: map,
-      history: [],
+      history: [map],
       hover: [0, 0],
       turn: 'Red',
       phase: 'initGame',
       selectedCoords: null,
       pendingAction: null,
       showMenu: false,
+      // debug purposes
+      useFirebase: false,
       firebaseRef: new Firebase('https://blistering-heat-9706.firebaseio.com/map'),
     };
   },
@@ -563,7 +564,7 @@ var App = React.createClass({
 
       var [[action, nextPhase], ...rest] = sequence;
       setTimeout(() => {
-        var {map, firebaseRef, history} = this.state;
+        var {map, history} = this.state;
 
         var newMap = action(map);
         this.setState({
@@ -571,7 +572,7 @@ var App = React.createClass({
           phase: nextPhase,
           history: history.concat([newMap ]),
         }, () => {
-          firebaseRef.set(JSON.stringify(js(newMap)));
+          this.state.useFirebase && this.state.firebaseRef.set(JSON.stringify(js(newMap)));
           doStep(rest);
         });
       }, 300);
@@ -588,27 +589,35 @@ var App = React.createClass({
   },
 
   componentDidMount: function() {
-    this.state.firebaseRef.once('value', (dataSnapshot) => {
-      var newMap = clj(JSON.parse(dataSnapshot.val()));
-      this.setState({
-        history: [newMap],
-        map: newMap,
-      }, () => this.repeatCycle('Red'));
-    });
+    var {useFirebase, firebaseRef} = this.state;
 
-    this.state.firebaseRef.on('value', (dataSnapshot) => {
-      var {map, history} = this.state;
-      var newMap = clj(JSON.parse(dataSnapshot.val()));
-      // careful about infinite recursive calls
-      if (M.equals(map, newMap)) {
-        return;
-      }
-
-      this.setState({
-        map: newMap,
-        history: history.concat([newMap]),
+    if (useFirebase) {
+      firebaseRef.once('value', (dataSnapshot) => {
+        var newMap = clj(JSON.parse(dataSnapshot.val()));
+        this.setState({
+          history: [newMap],
+          map: newMap,
+        }, () => this.repeatCycle('Red'));
       });
-    });
+
+      firebaseRef.on('value', (dataSnapshot) => {
+        var {map, history} = this.state;
+        var newMap = clj(JSON.parse(dataSnapshot.val()));
+        // careful about infinite recursive calls
+        if (M.equals(map, newMap)) {
+          return;
+        }
+
+        this.setState({
+          map: newMap,
+          history: history.concat([newMap]),
+        });
+      });
+    } else {
+      this.setState({
+        map: clj(map1),
+      }, () => this.repeatCycle('Red'));
+    }
 
     window.addEventListener('keydown', (e) => {
       // escape
@@ -620,7 +629,11 @@ var App = React.createClass({
 
   // for testing purposes, reset firebase map data
   handleResetGame: function() {
-    this.state.firebaseRef.set(JSON.stringify(map1));
+    this.setState({
+      map: clj(map1),
+    }, () => {
+      this.state.useFirebase && this.state.firebaseRef.set(JSON.stringify(map1));
+    });
   },
 
   handleRangeChange: function(e) {
@@ -661,7 +674,7 @@ var App = React.createClass({
   },
 
   handleTileMouseDown: function(i, j) {
-    var {map, pendingAction, selectedCoords, phase, turn, firebaseRef, history} = this.state;
+    var {map, pendingAction, selectedCoords, phase, turn, history} = this.state;
 
     var destColor = M.getIn(map, [i, j, 'color']);
     if (phase !== 'moveAndPurchase' || (!pendingAction && destColor !== turn)) {
@@ -695,7 +708,9 @@ var App = React.createClass({
       ...cancelPendingActionState,
       map: newMap,
       history: history.concat([newMap]),
-    }, () => firebaseRef.set(JSON.stringify(js(newMap))));
+    }, () => {
+      this.state.useFirebase && this.state.firebaseRef.set(JSON.stringify(js(newMap)));
+    });
   },
 
   handleTileHover: function(i, j) {
