@@ -1,4 +1,4 @@
-'use strict';
+ 'use strict';
 
 var React = require('react');
 var Grid = require('./src/map/Grid');
@@ -19,6 +19,8 @@ var map1 = require('./src/map/data/map1');
 
 var js = M.toJs;
 var clj = M.toClj;
+// TODO: randomize this
+var startcolor = "Red";
 
 function filterMap(map, f) {
   map = mapSeqToVec(map);
@@ -97,8 +99,13 @@ function killGrayMeadowCooldowns(map) {
   // matures
 }
 
-function growTrees(map) {
+function growTrees(map, turn) {
+
   map = mapSeqToVec(map);
+
+  if (turn !== startcolor) {
+    return map;
+  }
 
   var treeCoords = filterMap(map, (cell) => M.getIn(cell, ['units', 'Tree']));
   treeCoords = M.filter(() => Math.random() > 0.5, treeCoords);
@@ -562,7 +569,7 @@ var App = React.createClass({
         this.setState({
           map: newMap,
           phase: nextPhase,
-          history: history.concat([newMap]),
+          history: history.concat([newMap ]),
         }, () => {
           firebaseRef.set(JSON.stringify(js(newMap)));
           doStep(rest);
@@ -571,7 +578,7 @@ var App = React.createClass({
     };
 
     doStep([
-      [map => growTrees(map), 'resetUnitMoves'],
+      [map => growTrees(map, turn), 'resetUnitMoves'],
       [map => resetUnitMoves(map, turn), 'tombstone'],
       [map => tombstonesToTrees(map, turn), 'build'],
       [map => matureTiles(map, turn), 'income'],

@@ -10,7 +10,7 @@ var pendingActions = {
       ['New Peasant', 'newPeasant', 10, 0],
       ['New Infantry', 'newInfantry', 20, 0],
       ['New Soldier', 'newSoldier', 30, 0],
-      ['New Watchtower', 'newWatchtower', 0, 5],
+      // ['New Watchtower', 'newWatchtower', 0, 5],
       ['Upgrade to Fort', 'upgradeVillage', 0, 8],
     ],
     Fort: [
@@ -18,7 +18,7 @@ var pendingActions = {
       ['New Infantry', 'newInfantry', 20, 0],
       ['New Soldier', 'newSoldier', 30, 0],
       ['New Knight', 'newKnight', 40, 0],
-      ['New Watchtower', 'newWatchtower', 0, 5],
+      // ['New Watchtower', 'newWatchtower', 0, 5],
     ],
   },
 
