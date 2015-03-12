@@ -564,7 +564,7 @@ var App = React.createClass({
       pendingAction: null,
       showMenu: false,
       // debug purposes
-      cheatMode: true,
+      cheatMode: false,
       useFirebase: true,
     };
   },
@@ -702,8 +702,6 @@ var App = React.createClass({
         });
       });
     });
-
-
   },
 
   // for testing purposes, reset firebase map data
@@ -712,6 +710,12 @@ var App = React.createClass({
       ...veryFirstState,
       selfTurn: this.state.selfTurn,
     }, this.setFb);
+  },
+
+  handleCheatClick: function() {
+    this.setState({
+      cheatMode: true,
+    });
   },
 
   handleRangeChange: function(e) {
@@ -816,7 +820,7 @@ var App = React.createClass({
     var consoleS = {
       height: 100,
       color: 'white',
-      display: cheatMode ? 'block' : 'none',
+      display: cheatMode ? 'flex' : 'none',
     };
 
     var maybeMenu;
@@ -847,13 +851,19 @@ var App = React.createClass({
       }
     }
 
+    var clickS = {
+      color: 'white',
+    };
     var maybeDoneClick;
     if (phase === 'Player' && selfTurn === currTurn) {
-      maybeDoneClick = <div onClick={this.handleDoneClick}>Done</div>;
+      maybeDoneClick =
+        <div style={clickS} onClick={this.handleDoneClick}>Done</div>;
     }
 
     return (
       <div>
+        {maybeDoneClick}
+        <div style={clickS} onClick={this.handleCheatClick}>Cheat Mode</div>
         <div style={consoleS}>
           <input
             type="range"
@@ -861,11 +871,12 @@ var App = React.createClass({
             onChange={this.handleRangeChange}
             min={0}
             max={history.length - 1} />
-          max: {history.length - 1}.
-          current: {historyIndex}.
-          selfTurn: {turns[selfTurn]}.
+          <div>
+            max: {history.length - 1}.
+            current: {historyIndex}.
+            selfTurn: {turns[selfTurn]}.
+          </div>
 
-          {maybeDoneClick}
           <div onClick={this.handleResetGame}>Reset Game</div>
           <div>
             Phase: {phase}.
