@@ -1,4 +1,4 @@
- 'use strict';
+'use strict';
 
 var React = require('react');
 var Grid = require('./src/map/Grid');
@@ -19,8 +19,6 @@ var map1 = require('./src/map/data/map1');
 
 var js = M.toJs;
 var clj = M.toClj;
-// TODO: randomize this
-var startcolor = "Red";
 
 function filterMap(map, f) {
   map = mapSeqToVec(map);
@@ -99,13 +97,8 @@ function killGrayMeadowCooldowns(map) {
   // matures
 }
 
-function growTrees(map, turn) {
-
+function growTrees(map) {
   map = mapSeqToVec(map);
-
-  if (turn !== startcolor) {
-    return map;
-  }
 
   var treeCoords = filterMap(map, (cell) => M.getIn(cell, ['units', 'Tree']));
   treeCoords = M.filter(() => Math.random() > 0.5, treeCoords);
@@ -540,7 +533,8 @@ var App = React.createClass({
       map: map,
       history: [map],
       hover: [0, 0],
-      turn: 'Red',
+      turns: ['Red', 'Blue'],
+      currTurn: 0,
       phase: 'initGame',
       selectedCoords: null,
       pendingAction: null,
@@ -551,11 +545,26 @@ var App = React.createClass({
     };
   },
 
-  repeatCycle: function(turn) {
-    this.setState({
-      turn: turn,
-      phase: 'treeGrowth',
-    });
+  repeatCycle: function() {
+    var {turns, currTurn, phase} = this.state;
+    // currTurn is really previous turn here
+    var newRound = currTurn === turns.length - 1;
+
+    if (phase !== 'initGame') {
+      this.setState({
+        currTurn: newRound ? 0 : currTurn + 1,
+        phase: 'treeGrowth',
+      });
+    }
+
+    var steps = [
+      [(map, turn) => growTrees(map), 'resetUnitMoves'],
+      [(map, turn) => resetUnitMoves(map, turn), 'tombstone'],
+      [(map, turn) => tombstonesToTrees(map, turn), 'build'],
+      [(map, turn) => matureTiles(map, turn), 'income'],
+      [(map, turn) => addIncome(map, turn), 'payment'],
+      [(map, turn) => payOrDie(map, turn), 'moveAndPurchase'],
+    ];
 
     let doStep = (sequence) => {
       if (sequence.length === 0) {
@@ -564,13 +573,13 @@ var App = React.createClass({
 
       var [[action, nextPhase], ...rest] = sequence;
       setTimeout(() => {
-        var {map, history} = this.state;
+        var {map, history, currTurn, turns} = this.state;
 
-        var newMap = action(map);
+        var newMap = action(map, turns[currTurn]);
         this.setState({
           map: newMap,
           phase: nextPhase,
-          history: history.concat([newMap ]),
+          history: history.concat([newMap]),
         }, () => {
           this.state.useFirebase && this.state.firebaseRef.set(JSON.stringify(js(newMap)));
           doStep(rest);
@@ -578,14 +587,7 @@ var App = React.createClass({
       }, 300);
     };
 
-    doStep([
-      [map => growTrees(map, turn), 'resetUnitMoves'],
-      [map => resetUnitMoves(map, turn), 'tombstone'],
-      [map => tombstonesToTrees(map, turn), 'build'],
-      [map => matureTiles(map, turn), 'income'],
-      [map => addIncome(map, turn), 'payment'],
-      [map => payOrDie(map, turn), 'moveAndPurchase'],
-    ]);
+    doStep(newRound ? steps : steps.slice(1));
   },
 
   componentDidMount: function() {
@@ -597,7 +599,7 @@ var App = React.createClass({
         this.setState({
           history: [newMap],
           map: newMap,
-        }, () => this.repeatCycle('Red'));
+        }, () => this.repeatCycle());
       });
 
       firebaseRef.on('value', (dataSnapshot) => {
@@ -616,7 +618,7 @@ var App = React.createClass({
     } else {
       this.setState({
         map: clj(map1),
-      }, () => this.repeatCycle('Red'));
+      }, () => this.repeatCycle());
     }
 
     window.addEventListener('keydown', (e) => {
@@ -646,7 +648,7 @@ var App = React.createClass({
 
   handleDoneClick: function() {
     this.setState(cancelPendingActionState, () => {
-      this.repeatCycle(this.state.turn === 'Red' ? 'Blue' : 'Red');
+      this.repeatCycle();
     });
   },
 
@@ -674,10 +676,12 @@ var App = React.createClass({
   },
 
   handleTileMouseDown: function(i, j) {
-    var {map, pendingAction, selectedCoords, phase, turn, history} = this.state;
+    var {
+      map, pendingAction, selectedCoords, phase, currTurn, turns, history
+    } = this.state;
 
     var destColor = M.getIn(map, [i, j, 'color']);
-    if (phase !== 'moveAndPurchase' || (!pendingAction && destColor !== turn)) {
+    if (phase !== 'moveAndPurchase' || (!pendingAction && destColor !== turns[currTurn])) {
       this.setState(cancelPendingActionState);
       return;
     }
@@ -727,7 +731,8 @@ var App = React.createClass({
       phase,
       pendingAction,
       showMenu,
-      turn,
+      turns,
+      currTurn,
       history,
       historyIndex,
     } = this.state;
@@ -791,7 +796,9 @@ var App = React.createClass({
         <div onClick={this.handleResetGame}>Reset Game</div>
         <div style={consoleS}>
           <div>
-            Phase: {phase}. Pending action: {pendingAction || 'none'}. Turn: {turn || 'none'}
+            Phase: {phase}.
+            Pending action: {pendingAction || 'none'}.
+            Turn: {turns[currTurn] || 'none'}.
           </div>
           <pre style={{fontSize: 12}}>
             {JSON.stringify(js(M.getIn(mapSeqToVec(map), hover)), null, 2)}
