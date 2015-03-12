@@ -90,11 +90,19 @@ function canCoexist(map, unitName, i, j) {
 
 // ----------- phases
 
+// peasant cultivateMeadow, enemy disconnects territory, meadow gray, never
+// matures
+// TODO: use after invasion cuts off land
 function killGrayMeadowCooldowns(map) {
-  // TODO: use
+  map = mapSeqToVec(map);
 
-  // peasant cultivateMeadow, enemy disconnects territory, meadow gray, never
-  // matures
+  var grayMeadowCoords = filterMapByColor(map, 'Gray', (cell, i, j) => {
+    return M.getIn(cell, ['units', 'Meadow']);
+  });
+
+  return updateMap(map, grayMeadowCoords, (cell) => {
+    return M.assocIn(cell, ['units', 'Meadow', 'cooldown'], 0);
+  });
 }
 
 function growTrees(map) {
@@ -325,7 +333,7 @@ function getMenuItemsForVillager(typeName, {hasMoved, cooldown}, cb) {
 
 // ---------------- state returners
 
-function mayebTrampleOnMeadow(map, unitName, [i, j]) {
+function maybeTrampleOnMeadow(map, unitName, [i, j]) {
   map = mapSeqToVec(map);
 
   var hasMeadow = M.getIn(map, [i, j, 'units', 'Meadow']);
@@ -352,7 +360,7 @@ function newVillager(map, [di, dj], [vi, vj], unitName, gold) {
     return map;
   }
 
-  map = mayebTrampleOnMeadow(map, unitName, [di, dj]);
+  map = maybeTrampleOnMeadow(map, unitName, [di, dj]);
 
   var [type, typeName] = getMaybeVillage(map, vi, vj);
   map = M.updateIn(map, [vi, vj, 'units', typeName, 'gold'], add(-gold));
@@ -425,7 +433,7 @@ function move(map, [di, dj], [ui, uj]) {
     map = M.assocIn(map, [ui, uj, 'units', typeName, 'hasMoved'], true);
   }
 
-  map = mayebTrampleOnMeadow(map, typeName, [di, dj]);
+  map = maybeTrampleOnMeadow(map, typeName, [di, dj]);
 
   // might be joining 2/3 same-colored regions...
   if (destColor !== ownColor) {
@@ -535,7 +543,7 @@ var App = React.createClass({
       hover: [0, 0],
       turns: ['Red', 'Blue'],
       currTurn: 0,
-      phase: 'initGame',
+      phase: 'Player',
       selectedCoords: null,
       pendingAction: null,
       showMenu: false,
@@ -553,25 +561,27 @@ var App = React.createClass({
     if (phase !== 'initGame') {
       this.setState({
         currTurn: newRound ? 0 : currTurn + 1,
-        phase: 'treeGrowth',
       });
     }
 
     var steps = [
-      [(map, turn) => growTrees(map), 'resetUnitMoves'],
-      [(map, turn) => resetUnitMoves(map, turn), 'tombstone'],
-      [(map, turn) => tombstonesToTrees(map, turn), 'build'],
-      [(map, turn) => matureTiles(map, turn), 'income'],
-      [(map, turn) => addIncome(map, turn), 'payment'],
-      [(map, turn) => payOrDie(map, turn), 'moveAndPurchase'],
+      [(map, turn) => growTrees(map), 'Tree Growth', 0],
+      [(map, turn) => resetUnitMoves(map, turn), '', 0],
+      [(map, turn) => tombstonesToTrees(map, turn), 'Tombstones to Trees', 0],
+      [(map, turn) => matureTiles(map, turn), 'Building Meadows & Roads', 3000],
+      [(map, turn) => addIncome(map, turn), 'Generate Income', 3000],
+      [(map, turn) => payOrDie(map, turn), 'Payment', 3000],
     ];
 
-    let doStep = (sequence) => {
-      if (sequence.length === 0) {
+    let doStep = (steps) => {
+      if (steps.length === 0) {
+        this.setState({
+          phase: 'Player',
+        });
         return;
       }
 
-      var [[action, nextPhase], ...rest] = sequence;
+      var [[action, nextPhase, startDelay], ...rest] = steps;
       setTimeout(() => {
         var {map, history, currTurn, turns} = this.state;
 
@@ -584,7 +594,7 @@ var App = React.createClass({
           this.state.useFirebase && this.state.firebaseRef.set(JSON.stringify(js(newMap)));
           doStep(rest);
         });
-      }, 300);
+      }, startDelay);
     };
 
     doStep(newRound ? steps : steps.slice(1));
@@ -599,7 +609,7 @@ var App = React.createClass({
         this.setState({
           history: [newMap],
           map: newMap,
-        }, () => this.repeatCycle());
+        });
       });
 
       firebaseRef.on('value', (dataSnapshot) => {
@@ -618,7 +628,7 @@ var App = React.createClass({
     } else {
       this.setState({
         map: clj(map1),
-      }, () => this.repeatCycle());
+      });
     }
 
     window.addEventListener('keydown', (e) => {
@@ -647,9 +657,7 @@ var App = React.createClass({
   },
 
   handleDoneClick: function() {
-    this.setState(cancelPendingActionState, () => {
-      this.repeatCycle();
-    });
+    this.setState(cancelPendingActionState, this.repeatCycle);
   },
 
   handleMenuItemClick: function(action) {
@@ -681,7 +689,7 @@ var App = React.createClass({
     } = this.state;
 
     var destColor = M.getIn(map, [i, j, 'color']);
-    if (phase !== 'moveAndPurchase' || (!pendingAction && destColor !== turns[currTurn])) {
+    if (phase !== 'Player' || (!pendingAction && destColor !== turns[currTurn])) {
       this.setState(cancelPendingActionState);
       return;
     }
@@ -777,7 +785,7 @@ var App = React.createClass({
     }
 
     var maybeDoneClick;
-    if (phase === 'moveAndPurchase') {
+    if (phase === 'Player') {
       maybeDoneClick = <div onClick={this.handleDoneClick}>Done</div>;
     }
 
