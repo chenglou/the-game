@@ -568,9 +568,9 @@ var App = React.createClass({
       [(map, turn) => growTrees(map), 'Tree Growth', 0],
       [(map, turn) => resetUnitMoves(map, turn), '', 0],
       [(map, turn) => tombstonesToTrees(map, turn), 'Tombstones to Trees', 0],
-      [(map, turn) => matureTiles(map, turn), 'Building Meadows & Roads', 3000],
-      [(map, turn) => addIncome(map, turn), 'Generate Income', 3000],
-      [(map, turn) => payOrDie(map, turn), 'Payment', 3000],
+      [(map, turn) => matureTiles(map, turn), 'Building Meadows & Roads', 1000],
+      [(map, turn) => addIncome(map, turn), 'Generate Income', 1000],
+      [(map, turn) => payOrDie(map, turn), 'Payment', 1000],
     ];
 
     let doStep = (steps) => {

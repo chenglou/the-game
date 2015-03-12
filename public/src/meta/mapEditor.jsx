@@ -1,3 +1,5 @@
+'use strict';
+
 var M = require('mori');
 var Grid = require('../map/Grid');
 var positioner = require('../map/positioner');
@@ -142,8 +144,13 @@ var Editor = React.createClass({
       }
     }
 
-    tile.units[selectedUnit] = everyUnit.defaultConfig[selectedUnit];
+    // don't mutate
+    tile.units[selectedUnit] = {...everyUnit.defaultConfig[selectedUnit]};
     tile.color = this.state.selectedColor;
+    if (selectedUnit === 'Meadow' || selectedUnit === 'Road') {
+      // don't wanna start with the default cooldown
+      tile.units[selectedUnit].cooldown = 0;
+    }
 
     return M.updateIn(tiles, [i, j], () => M.toClj(tile));
   },
