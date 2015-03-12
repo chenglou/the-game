@@ -19,15 +19,15 @@ function orderUnitsForDisplay(unitNames) {
   return M.sort((a, b) => nameInDisplayOrder[a] - nameInDisplayOrder[b], unitNames);
 }
 
-function getOverlayStyle(bg, active) {
+function getOverlayStyle(bg, isFocus, isActiveTurn) {
   var [w, h] = assetDims.overlay;
 
   return {
     backgroundImage: bg,
     backgroundRepeat: 'no-repeat',
-    opacity: active ? 1 : 0.5,
+    opacity: isFocus || isActiveTurn ? 1 : 0.5,
     top: -4,
-    zIndex: active ? 100 : 99,
+    zIndex: isFocus ? 100 : 99,
     width: w,
     height: h,
     marginLeft: (positioner.calcW() - w) / 2,
@@ -36,22 +36,18 @@ function getOverlayStyle(bg, active) {
 
 var Grid = React.createClass({
   propTypes: {
-    // tileConfigs: p.arrayOf(p.array.isRequired).isRequired,
-    active: p.array.isRequired,
-    tileMouseDown: p.func.isRequired,
-    tileHover: p.func.isRequired,
+    tileConfigs: p.any.isRequired,
+    hover: p.array.isRequired,
+    onTileMouseDown: p.func.isRequired,
+    onTileHover: p.func.isRequired,
+    turn: p.string,
   },
 
   render: function() {
-    var props = this.props;
-    var tileConfigs = props.tileConfigs;
+    var {tileConfigs, hover, onTileMouseDown, onTileHover, children, turn} = this.props;
 
     var h = M.count(tileConfigs);
     var w = M.count(M.first(tileConfigs));
-
-    var rowS = {
-      width: 9999,
-    };
 
     var tiles = M.map((row, i) => {
       var cells = M.map((cell, j) => {
@@ -73,30 +69,35 @@ var Grid = React.createClass({
           : 'none';
 
         var maybeActiveOverlay;
-        if (props && i === props.active[0] && j === props.active[1]) {
+        if (i === hover[0] && j === hover[1]) {
           maybeActiveOverlay =
-            <div style={getOverlayStyle(url(overlayActive), true)}></div>;
+            <div
+              style={getOverlayStyle(url(overlayActive), true, false)}>
+            </div>;
         }
 
         return (
           <Tile
             key={j}
             pos={[i, j]}
-            onMouseDown={props.tileMouseDown.bind(null, i, j)}
-            onMouseEnter={props.tileHover.bind(null, i, j)}>
+            onMouseDown={onTileMouseDown.bind(null, i, j)}
+            onMouseEnter={onTileHover.bind(null, i, j)}>
               {js(unitComponents)}
-              <div style={getOverlayStyle(overlay, false)}></div>
+              <div style={getOverlayStyle(overlay, false, turn === color)}></div>
               {maybeActiveOverlay}
               {false && i + ',' + j}
           </Tile>
         );
       }, row, M.range());
 
-      return <div key={i} style={rowS}>{js(cells)}</div>;
+      return <div key={i}>{js(cells)}</div>;
     }, tileConfigs, M.range());
 
     var s = {
-      height: positioner.calcH(25) * M.count(tileConfigs),
+      width: positioner.calcLeft(w, 1),
+      height: positioner.calcTop(h + 1),
+      // needed for abs positioned things inside, e.g. menu
+      position: 'relative',
     };
     var tilesS = {
       position: 'absolute',
@@ -106,7 +107,7 @@ var Grid = React.createClass({
         <div className="gridWrapper" style={tilesS}>
           {js(tiles)}
         </div>
-        {props.children}
+        {children}
       </div>
     );
   }

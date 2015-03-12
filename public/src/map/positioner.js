@@ -1,3 +1,5 @@
+'use strict';
+
 var tileH = 89;
 var tileW = 65;
 
@@ -14,7 +16,7 @@ function calcW() {
 
 // relative to 0, 0
 function calcLeft(x, y) {
-  return (y % 2 === 0 ? 0 : tileW/2) + x * tileW;
+  return (y % 2 === 0 ? 0 : tileW / 2) + x * tileW;
 }
 
 // relative to 0, 0

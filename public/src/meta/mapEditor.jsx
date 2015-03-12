@@ -286,10 +286,10 @@ var Editor = React.createClass({
             onMouseDown={this.handleMouseDown}
             onMouseUp={this.handleMouseUp}>
             <Grid
-              active={hover}
+              hover={hover}
               tileConfigs={state.tiles}
-              tileMouseDown={this.handleTileMouseDown}
-              tileHover={this.handleTileHover} />
+              onTileMouseDown={this.handleTileMouseDown}
+              onTileHover={this.handleTileHover} />
           </div>
         </div>
 

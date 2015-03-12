@@ -548,6 +548,7 @@ var App = React.createClass({
       pendingAction: null,
       showMenu: false,
       // debug purposes
+      cheatMode: true,
       useFirebase: false,
       firebaseRef: new Firebase('https://blistering-heat-9706.firebaseio.com/map'),
     };
@@ -632,9 +633,12 @@ var App = React.createClass({
     }
 
     window.addEventListener('keydown', (e) => {
-      // escape
       if (e.which === 27) {
+        // escape
         this.setState(cancelPendingActionState);
+      } else if (e.which === 13) {
+        // enter, done own turn
+        this.setState(cancelPendingActionState, this.repeatCycle);
       }
     });
   },
@@ -743,17 +747,13 @@ var App = React.createClass({
       currTurn,
       history,
       historyIndex,
+      cheatMode,
     } = this.state;
-
-    var gridWrapper = {
-      border: '1px solid black',
-      width: 10000,
-      top: 100,
-      position: 'relative',
-    };
 
     var consoleS = {
       height: 100,
+      color: 'white',
+      display: cheatMode ? 'flex' : 'none',
     };
 
     var maybeMenu;
@@ -791,18 +791,18 @@ var App = React.createClass({
 
     return (
       <div>
-        <input
-          type="range"
-          value={historyIndex}
-          onChange={this.handleRangeChange}
-          min={0}
-          max={history.length - 1} />
-        max: {history.length - 1}
-        current: {historyIndex}
-
-        {maybeDoneClick}
-        <div onClick={this.handleResetGame}>Reset Game</div>
         <div style={consoleS}>
+          <input
+            type="range"
+            value={historyIndex}
+            onChange={this.handleRangeChange}
+            min={0}
+            max={history.length - 1} />
+          max: {history.length - 1}
+          current: {historyIndex}
+
+          {maybeDoneClick}
+          <div onClick={this.handleResetGame}>Reset Game</div>
           <div>
             Phase: {phase}.
             Pending action: {pendingAction || 'none'}.
@@ -812,15 +812,15 @@ var App = React.createClass({
             {JSON.stringify(js(M.getIn(mapSeqToVec(map), hover)), null, 2)}
           </pre>
         </div>
-        <div style={gridWrapper}>
-          <Grid
-            active={hover}
-            tileConfigs={map}
-            tileMouseDown={this.handleTileMouseDown}
-            tileHover={this.handleTileHover}>
-              {maybeMenu}
-          </Grid>
-        </div>
+
+        <Grid
+          hover={hover}
+          turn={turns[currTurn]}
+          tileConfigs={map}
+          onTileMouseDown={this.handleTileMouseDown}
+          onTileHover={this.handleTileHover}>
+            {maybeMenu}
+        </Grid>
       </div>
     );
   }
