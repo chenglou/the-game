@@ -596,7 +596,7 @@ var App = React.createClass({
       [(map, turn) => growTrees(map), 'Tree Growth', 0],
       [(map, turn) => resetUnitMoves(map, turn), '', 0],
       [(map, turn) => tombstonesToTrees(map, turn), 'Tombstones to Trees', 0],
-      [(map, turn) => matureTiles(map, turn), 'Building Meadows & Roads', 1000],
+      [(map, turn) => matureTiles(map, turn), 'Builds', 1000],
       [(map, turn) => addIncome(map, turn), 'Generate Income', 1000],
       [(map, turn) => payOrDie(map, turn), 'Payment', 1000],
     ];
@@ -714,7 +714,7 @@ var App = React.createClass({
 
   handleCheatClick: function() {
     this.setState({
-      cheatMode: true,
+      cheatMode: !this.state.cheatMode,
     });
   },
 
@@ -777,15 +777,15 @@ var App = React.createClass({
 
     var newMap;
     if (pendingAction === 'newPeasant') {
-        newMap = newVillager(map, [i, j], selectedCoords, 'Peasant', 10);
+      newMap = newVillager(map, [i, j], selectedCoords, 'Peasant', 10);
     } else if (pendingAction === 'newInfantry') {
-        newMap = newVillager(map, [i, j], selectedCoords, 'Infantry', 20);
+      newMap = newVillager(map, [i, j], selectedCoords, 'Infantry', 20);
     } else if (pendingAction === 'newSoldier') {
-        newMap = newVillager(map, [i, j], selectedCoords, 'Soldier', 30);
+      newMap = newVillager(map, [i, j], selectedCoords, 'Soldier', 30);
     } else if (pendingAction === 'newKnight') {
-        newMap = newVillager(map, [i, j], selectedCoords, 'Knight', 40);
+      newMap = newVillager(map, [i, j], selectedCoords, 'Knight', 40);
     } else if (pendingAction === 'move') {
-        newMap = move(map, [i, j], selectedCoords);
+      newMap = move(map, [i, j], selectedCoords);
     }
 
     this.setState({
@@ -816,12 +816,6 @@ var App = React.createClass({
       cheatMode,
       selfTurn,
     } = this.state;
-
-    var consoleS = {
-      height: 100,
-      color: 'white',
-      display: cheatMode ? 'flex' : 'none',
-    };
 
     var maybeMenu;
 
@@ -854,16 +848,24 @@ var App = React.createClass({
     var clickS = {
       color: 'white',
     };
-    var maybeDoneClick;
-    if (phase === 'Player' && selfTurn === currTurn) {
-      maybeDoneClick =
-        <div style={clickS} onClick={this.handleDoneClick}>Done</div>;
-    }
 
-    return (
-      <div>
-        {maybeDoneClick}
-        <div style={clickS} onClick={this.handleCheatClick}>Cheat Mode</div>
+    let disabled = !(phase === 'Player' && selfTurn === currTurn);
+    let handleDoneClick = disabled ? function() {} : this.handleDoneClick;
+    var doneClick = (
+      <MenuItem onClick={handleDoneClick} disabled={disabled}>
+        {disabled ? phase : 'End Turn'}
+      </MenuItem>
+    );
+
+    var consoleS = {
+      height: 150,
+      color: 'white',
+      display: cheatMode ? 'flex' : 'none',
+    };
+
+    var maybeConsole;
+    if (cheatMode) {
+      maybeConsole =
         <div style={consoleS}>
           <input
             type="range"
@@ -886,8 +888,14 @@ var App = React.createClass({
           <pre style={{fontSize: 12}}>
             {JSON.stringify(js(M.getIn(mapSeqToVec(map), hover)), null, 2)}
           </pre>
-        </div>
+        </div>;
+    }
 
+    return (
+      <div>
+        {doneClick}
+        <div style={clickS} onClick={this.handleCheatClick}>Cheat Mode</div>
+        {maybeConsole}
         <Grid
           hover={hover}
           turn={turns[currTurn]}

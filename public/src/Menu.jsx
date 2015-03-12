@@ -26,7 +26,7 @@ var MenuItem = React.createClass({
 
     var innerS = {
       padding: '13px 0px 0px 10px',
-    }
+    };
 
     return (
       <div style={itemS} {...props}>
