@@ -558,6 +558,7 @@ var App = React.createClass({
       selfTurn: -1,
 
       history: [map],
+      historyIndex: 0,
       hover: [0, 0],
       turns: ['Red', 'Blue'],
       selectedCoords: null,
@@ -566,6 +567,7 @@ var App = React.createClass({
       // debug purposes
       cheatMode: false,
       useFirebase: true,
+      // useFirebase: false,
     };
   },
 
@@ -595,7 +597,7 @@ var App = React.createClass({
     var steps = [
       [(map, turn) => growTrees(map), 'Tree Growth', 0],
       [(map, turn) => resetUnitMoves(map, turn), '', 0],
-      [(map, turn) => tombstonesToTrees(map, turn), 'Tombstones to Trees', 0],
+      [(map, turn) => tombstonesToTrees(map, turn), 'Tombstones Trees', 0],
       [(map, turn) => matureTiles(map, turn), 'Builds', 1000],
       [(map, turn) => addIncome(map, turn), 'Generate Income', 1000],
       [(map, turn) => payOrDie(map, turn), 'Payment', 1000],
@@ -845,6 +847,8 @@ var App = React.createClass({
       }
     }
 
+    var currTurnColor = turns[currTurn];
+
     var clickS = {
       color: 'white',
     };
@@ -853,7 +857,7 @@ var App = React.createClass({
     let handleDoneClick = disabled ? function() {} : this.handleDoneClick;
     var doneClick = (
       <MenuItem onClick={handleDoneClick} disabled={disabled}>
-        {disabled ? phase : 'End Turn'}
+        {disabled ? currTurnColor + ': ' + phase : 'End Turn'}
       </MenuItem>
     );
 
@@ -874,20 +878,23 @@ var App = React.createClass({
             min={0}
             max={history.length - 1} />
           <div>
-            max: {history.length - 1}.
             current: {historyIndex}.
             selfTurn: {turns[selfTurn]}.
           </div>
 
           <div onClick={this.handleResetGame}>Reset Game</div>
           <div>
-            Phase: {phase}.
             Pending action: {pendingAction || 'none'}.
-            Turn: {turns[currTurn] || 'none'}.
           </div>
           <pre style={{fontSize: 12}}>
             {JSON.stringify(js(M.getIn(mapSeqToVec(map), hover)), null, 2)}
           </pre>
+          <textarea
+            readOnly={true}
+            style={{WebkitUserSelect: 'inherit'}}
+            value={JSON.stringify(js(map))}
+            cols={120}
+            rows={20} />
         </div>;
     }
 
@@ -898,7 +905,7 @@ var App = React.createClass({
         {maybeConsole}
         <Grid
           hover={hover}
-          turn={turns[currTurn]}
+          turn={currTurnColor}
           tileConfigs={map}
           onTileMouseDown={this.handleTileMouseDown}
           onTileHover={this.handleTileHover}>
