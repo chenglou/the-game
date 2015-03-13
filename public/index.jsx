@@ -127,13 +127,23 @@ function growTrees(map) {
   }, map, treeCoords);
 }
 
-function tombstonesToTrees(map, turn) {
+function killTombstones(map, turn) {
   var tombstoneCoords = filterMapByColor(map, turn, (cell) => {
     return M.getIn(cell, ['units', 'Tombstone']);
   });
+
   return updateMap(map, tombstoneCoords, (cell) => {
     cell = dissocIn(cell, ['units', 'Tombstone']);
-    return M.assocIn(cell, ['units', 'Tree'], clj(everyUnit.defaultConfig.Tree));
+
+    // become a tree usually. ff it's on a road/meadow, then just make it
+    // disappear (tree can't be on road/meadow)
+    var hasMeadow = M.getIn(cell, ['units', 'Meadow']);
+    var hasRoadWith0Cooldown =
+      M.getIn(cell, ['units', 'Road', 'cooldown']) === 0;
+
+    return hasMeadow || hasRoadWith0Cooldown
+      ? cell
+      : M.assocIn(cell, ['units', 'Tree'], clj(everyUnit.defaultConfig.Tree));
   });
 }
 
@@ -521,7 +531,7 @@ var veryFirstState = {
   map: clj(map1),
   currTurn: 0,
   phase: 'Player',
-  selfTurn: 1,
+  selfTurn: 0,
 };
 
 // test helper
@@ -566,8 +576,8 @@ var App = React.createClass({
       showMenu: false,
       // debug purposes
       cheatMode: false,
-      useFirebase: true,
-      // useFirebase: false,
+      // useFirebase: true,
+      useFirebase: false,
     };
   },
 
@@ -597,10 +607,10 @@ var App = React.createClass({
     var steps = [
       [(map, turn) => growTrees(map), 'Tree Growth', 0],
       [(map, turn) => resetUnitMoves(map, turn), '', 0],
-      [(map, turn) => tombstonesToTrees(map, turn), 'Tombstones Trees', 0],
-      [(map, turn) => matureTiles(map, turn), 'Builds', 1000],
-      [(map, turn) => addIncome(map, turn), 'Generate Income', 1000],
-      [(map, turn) => payOrDie(map, turn), 'Payment', 1000],
+      [(map, turn) => killTombstones(map, turn), 'Kill Tombstones', 0],
+      [(map, turn) => matureTiles(map, turn), 'Builds', 400],
+      [(map, turn) => addIncome(map, turn), 'Generate Income', 400],
+      [(map, turn) => payOrDie(map, turn), 'Payment', 400],
     ];
 
     let doStep = (steps) => {
