@@ -14,11 +14,15 @@ var positioner = require('./src/map/positioner');
 var everyUnit = require('./src/everyUnit');
 var {pendingActions, immediateActions} = require('./src/actions');
 var Firebase = require('firebase');
+var UnitSelector = require('./src/debug/UnitSelector');
+var surroundWithSea = require('./src/debug/surroundWithSea');
+var forceAddNewUnit = require('./src/debug/forceAddNewUnit');
 
 var map1 = require('./src/map/data/map1');
 
 var js = M.toJs;
 var clj = M.toClj;
+var p = React.PropTypes;
 
 function filterMap(map, f) {
   map = mapSeqToVec(map);
@@ -561,8 +565,10 @@ var App = React.createClass({
       currTurn: 0,
       phase: '',
 
-      fbState: new Firebase(fireBaseBaseUrl + 'state'),
-      fbEmptySlots: new Firebase(fireBaseBaseUrl + 'emptySlots'),
+      fbState: function() {},
+      fbEmptySlots: function() {},
+      // fbState: new Firebase(fireBaseBaseUrl + 'state'),
+      // fbEmptySlots: new Firebase(fireBaseBaseUrl + 'emptySlots'),
 
       // who am I. modified once by fireBase
       selfTurn: -1,
@@ -574,8 +580,13 @@ var App = React.createClass({
       selectedCoords: null,
       pendingAction: null,
       showMenu: false,
+
       // debug purposes
-      cheatMode: false,
+      cheatMode: true,
+      mouseDown: false,
+      creatingUnit: false,
+      consoleSelectedUnit: 'Grass',
+      consoleSelectedColor: 'Gray',
       // useFirebase: true,
       useFirebase: false,
     };
@@ -641,6 +652,12 @@ var App = React.createClass({
   },
 
   componentDidMount: function() {
+    var {
+      useFirebase,
+      fbState,
+      fbEmptySlots,
+    } = this.state;
+
     window.addEventListener('keydown', (e) => {
       if (e.which === 27) {
         // escape
@@ -648,10 +665,27 @@ var App = React.createClass({
       } else if (e.which === 13) {
         // enter, done own turn
         this.setState(cancelPendingActionState, this.repeatCycle);
+      } else if (e.which === 91) {
+        // cmd
+        this.setState({
+          creatingUnit: true,
+        });
       }
     });
 
-    var {useFirebase, fbState, fbEmptySlots} = this.state;
+    window.addEventListener('keyup', (e) => {
+      if (e.which === 91) {
+        this.setState({
+          creatingUnit: false,
+        });
+      }
+    });
+
+    window.addEventListener('mouseup', () => {
+      this.setState({
+        mouseDown: false,
+      });
+    });
 
     if (!useFirebase) {
       this.setState(veryFirstState);
@@ -767,8 +801,26 @@ var App = React.createClass({
 
   handleTileMouseDown: function(i, j) {
     var {
-      map, pendingAction, selectedCoords, phase, currTurn, turns, history, selfTurn
+      map,
+      pendingAction,
+      selectedCoords,
+      phase,
+      currTurn,
+      turns,
+      history,
+      selfTurn,
+      creatingUnit,
+      consoleSelectedColor,
+      consoleSelectedUnit,
     } = this.state;
+
+    if (creatingUnit) {
+      this.setState({
+        mouseDown: true,
+        map: forceAddNewUnit(map, i, j, consoleSelectedColor, consoleSelectedUnit),
+      });
+      return;
+    }
 
     var destColor = M.getIn(map, [i, j, 'color']);
     if (phase !== 'Player' ||
@@ -808,8 +860,59 @@ var App = React.createClass({
   },
 
   handleTileHover: function(i, j) {
+    var {map, creatingUnit, consoleSelectedColor, consoleSelectedUnit, mouseDown} = this.state;
+
     this.setState({
       hover: [i, j],
+      map: creatingUnit && mouseDown
+        ? forceAddNewUnit(map, i, j, consoleSelectedColor, consoleSelectedUnit)
+        : map,
+    });
+  },
+
+  handleConsoleTextAreaChange: function(e) {
+    this.setState({
+      map: clj(JSON.parse(e.target.value)),
+    });
+  },
+
+  handleConsoleColorClick: function(color) {
+    this.setState({
+      consoleSelectedColor: color,
+    });
+  },
+
+  handleConsoleUnitSelect: function(unitName) {
+    this.setState({
+      consoleSelectedUnit: unitName,
+    });
+  },
+
+  handleConsoleWHChange: function(prop, e) {
+    var val = parseInt(e.target.value);
+    if (val < 1 || val > 50) {
+      return;
+    }
+
+    var map = this.state.map;
+    var grassTileConfig = clj({
+      units: {
+        Grass: everyUnit.defaultConfig.Grass,
+      },
+      color: 'Gray',
+    });
+
+    if (prop === 'w') {
+      map = M.map((row) => {
+        return M.take(val, M.concat(row, M.repeat(grassTileConfig)));
+      }, map);
+    } else {
+      var row = M.repeat(val, grassTileConfig);
+      map = M.take(val, M.concat(map, M.repeat(row)));
+    }
+
+    this.setState({
+      map: surroundWithSea(map),
     });
   },
 
@@ -819,14 +922,17 @@ var App = React.createClass({
       selectedCoords,
       map,
       phase,
-      pendingAction,
+      // pendingAction,
       showMenu,
       turns,
       currTurn,
       history,
       historyIndex,
-      cheatMode,
       selfTurn,
+
+      cheatMode,
+      consoleSelectedUnit,
+      consoleSelectedColor,
     } = this.state;
 
     var maybeMenu;
@@ -861,6 +967,7 @@ var App = React.createClass({
 
     var clickS = {
       color: 'white',
+      float: 'right',
     };
 
     let disabled = !(phase === 'Player' && selfTurn === currTurn);
@@ -872,13 +979,22 @@ var App = React.createClass({
     );
 
     var consoleS = {
-      height: 150,
       color: 'white',
       display: cheatMode ? 'flex' : 'none',
+      flexDirection: 'column',
     };
 
     var maybeConsole;
     if (cheatMode) {
+      let stateToDisplay = {
+        ...this.state,
+        map: '...',
+        fbState: '...',
+        fbEmptySlots: '...',
+        history: '...',
+      };
+      let w = M.count(map);
+      let h = M.count(M.first(map));
       maybeConsole =
         <div style={consoleS}>
           <input
@@ -887,31 +1003,42 @@ var App = React.createClass({
             onChange={this.handleRangeChange}
             min={0}
             max={history.length - 1} />
-          <div>
-            current: {historyIndex}.
-            selfTurn: {turns[selfTurn]}.
-          </div>
 
           <div onClick={this.handleResetGame}>Reset Game</div>
-          <div>
-            Pending action: {pendingAction || 'none'}.
-          </div>
           <pre style={{fontSize: 12}}>
-            {JSON.stringify(js(M.getIn(mapSeqToVec(map), hover)), null, 2)}
+            {JSON.stringify(stateToDisplay, null, 2)}
           </pre>
           <textarea
-            readOnly={true}
             style={{WebkitUserSelect: 'inherit'}}
             value={JSON.stringify(js(map))}
+            onChange={this.handleConsoleTextAreaChange}
             cols={120}
-            rows={20} />
+            rows={5} />
+          <UnitSelector
+            unitName={consoleSelectedUnit}
+            color={consoleSelectedColor}
+            onColorClick={this.handleConsoleColorClick}
+            onUnitClick={this.handleConsoleUnitSelect} />
+
+          <input
+            type="range"
+            value={w}
+            max={50}
+            onChange={this.handleConsoleWHChange.bind(null, 'w')} />
+          <span>width {w}</span>
+          <input
+            type="range"
+            value={h}
+            max={50}
+            onChange={this.handleConsoleWHChange.bind(null, 'h')} />
+          <span>height {h}</span>
         </div>;
     }
 
     return (
       <div>
-        {doneClick}
         <div style={clickS} onClick={this.handleCheatClick}>Cheat Mode</div>
+        {doneClick}
         {maybeConsole}
         <Grid
           hover={hover}
