@@ -44,7 +44,14 @@ var Grid = React.createClass({
   },
 
   render: function() {
-    var {tileConfigs, hover, onTileMouseDown, onTileHover, children, turn} = this.props;
+    var {
+      tileConfigs,
+      hover,
+      onTileMouseDown,
+      onTileHover,
+      children,
+      turn,
+    } = this.props;
 
     var h = M.count(tileConfigs);
     var w = M.count(M.first(tileConfigs));

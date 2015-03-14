@@ -41,14 +41,6 @@ var nameInDisplayOrder = {
 };
 
 var rank = {
-  // shouldnt be needing these
-  Grass: 0,
-  Sea: 0,
-  Road: 0,
-  Meadow: 0,
-  Tree: 0,
-  Tombstone: 0,
-
   // hovel: overtaken by enemy soldier
   // town: overtaken by enemy soldier
   // fort: overtaken by knight
@@ -72,7 +64,6 @@ var defaultConfig = {
   Town: {gold: 7, wood: 0},
   Fort: {gold: 7, wood: 0},
 
-  // careful about the cooldown here during initialization
   Road: {cooldown: 1},
   Meadow: {cooldown: 2},
 

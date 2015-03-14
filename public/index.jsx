@@ -4,12 +4,12 @@ var React = require('react');
 var Grid = require('./src/map/Grid');
 var {Menu, MenuItem} = require('./src/Menu');
 var M = require('mori');
-var coexistances = require('./src/coexistances');
 var dissocIn = require('./src/utils/dissocIn');
 var randNth = require('./src/utils/randNth');
 var add = require('./src/utils/add');
 var findNeighbors = require('./src/findNeighbors');
 var mapSeqToVec = require('./src/mapSeqToVec');
+var getConflicts = require('./src/getConflicts');
 var positioner = require('./src/map/positioner');
 var everyUnit = require('./src/everyUnit');
 var {pendingActions, immediateActions} = require('./src/actions');
@@ -22,7 +22,6 @@ var map1 = require('./src/map/data/map1');
 
 var js = M.toJs;
 var clj = M.toClj;
-var p = React.PropTypes;
 
 function filterMap(map, f) {
   map = mapSeqToVec(map);
@@ -37,6 +36,16 @@ function filterMap(map, f) {
 }
 
 // helper
+function getColor(map, i, j) {
+  map = mapSeqToVec(map);
+  return M.getIn(map, [i, j, 'color']);
+}
+
+function getUnits(map, i, j) {
+  map = mapSeqToVec(map);
+  return M.getIn(map, [i, j, 'units']);
+}
+
 function filterMapByColor(map, turn, f) {
   return filterMap(map, (cell, i, j) => {
     return M.get(cell, 'color') === turn && f(cell, i, j);
@@ -52,7 +61,7 @@ function updateMap(map, coordsList, f) {
 }
 
 function getMaybeVillage(map, i, j) {
-  var config = M.getIn(map, [i, j, 'units']);
+  var config = getUnits(map, i, j);
 
   var hovel = M.get(config, 'Hovel');
   var town = M.get(config, 'Town');
@@ -68,7 +77,7 @@ function getMaybeVillage(map, i, j) {
 }
 
 function getMaybeVillager(map, i, j) {
-  var config = M.getIn(map, [i, j, 'units']);
+  var config = getUnits(map, i, j);
 
   var peasant = M.get(config, 'Peasant');
   var infantry = M.get(config, 'Infantry');
@@ -83,13 +92,6 @@ function getMaybeVillager(map, i, j) {
     : null;
 
   return [type, typeName];
-}
-
-function canCoexist(map, unitName, i, j) {
-  return M.every(
-    potentialConflict => coexistances[potentialConflict][unitName],
-    M.keys(M.getIn(map, [i, j, 'units']))
-  );
 }
 
 // ----------- phases
@@ -117,7 +119,7 @@ function growTrees(map) {
 
   return M.reduce((map, [i, j]) => {
     var emptyNeighbors = findNeighbors(map, i, j).filter(([i, j]) => {
-      return canCoexist(map, 'Tree', i, j);
+      return M.isEmpty(getConflicts(map, 'Tree', i, j));
     });
 
     if (emptyNeighbors.length === 0) {
@@ -180,7 +182,7 @@ function matureBuilt(map, turn, unitName) {
 function findRegion(map, i, j) {
   map = mapSeqToVec(map);
 
-  var color = M.getIn(map, [i, j, 'color']);
+  var color = getColor(map, i, j);
 
   var visited = M.set();
   var toVisit = [[i, j]];
@@ -188,7 +190,7 @@ function findRegion(map, i, j) {
   while (toVisit.length > 0) {
     let [i, j] = toVisit.pop();
     var unVisitedSameColorNeighbors = findNeighbors(map, i, j)
-      .filter(([i, j]) => M.getIn(map, [i, j, 'color']) === color)
+      .filter(([i, j]) => getColor(map, i, j) === color)
       .filter(([i, j]) => !M.get(visited, M.vector(i, j)));
 
     unVisitedSameColorNeighbors.forEach(([i, j]) => {
@@ -209,7 +211,7 @@ function addIncome(map, turn) {
 
   return M.reduce((map, [i, j]) => {
     var sum = findRegion(map, i, j).reduce((sum, [i, j]) => {
-      var config = M.getIn(map, [i, j, 'units']);
+      var config = getUnits(map, i, j);
       var get = (unitName) => M.get(config, unitName);
 
       // this is only determined by the land type (sea, grass, meadow, tree)
@@ -259,7 +261,7 @@ function dieTime(map, turn) {
   });
 
   return M.reduce((map, [i, j]) => {
-    var config = M.getIn(map, [i, j, 'units']);
+    var config = getUnits(map, i, j);
 
     var [type, typeName] = getMaybeVillage(map, i, j);
 
@@ -370,7 +372,7 @@ function newVillager(map, [di, dj], [vi, vj], unitName, gold) {
   var clickedInRegion = findRegion(map, vi, vj)
     .some(([i2, j2]) => di === i2 && dj === j2);
 
-  if (!clickedInRegion || !canCoexist(map, unitName, di, dj)) {
+  if (!clickedInRegion || !M.isEmpty(getConflicts(map, unitName, di, dj))) {
     return map;
   }
 
@@ -397,8 +399,8 @@ function move(map, [di, dj], [ui, uj]) {
 
   var [type, typeName] = getMaybeVillager(map, ui, uj);
   var destConfig = M.getIn(map, [di, dj]);
-  var destColor = M.get(destConfig, 'color');
-  var ownColor = M.getIn(map, [ui, uj, 'color']);
+  var destColor = getColor(map, di, dj);
+  var ownColor = getColor(map, ui, uj);
 
   var isEnemyColor = destColor !== 'Gray' && destColor !== ownColor;
 
@@ -435,7 +437,7 @@ function move(map, [di, dj], [ui, uj]) {
 
   // check if unit can coexist on dest tile. this must be done after removing
   // tombstone and tree
-  if (!canCoexist(map, typeName, di, dj)) {
+  if (!M.isEmpty(getConflicts(map, typeName, di, dj))) {
     return map;
   }
 
@@ -452,7 +454,7 @@ function move(map, [di, dj], [ui, uj]) {
   // might be joining 2/3 same-colored regions...
   if (destColor !== ownColor) {
     var regions = findNeighbors(map, di, dj)
-      .filter(([i, j]) => M.getIn(map, [i, j, 'color']) === ownColor)
+      .filter(([i, j]) => getColor(map, i, j) === ownColor)
       .map(([i, j]) => findRegion(map, i, j));
 
     // will kill dupe villages
@@ -526,7 +528,6 @@ function upgradeVillage(map, [i, j]) {
 // -------------------------- menu actions over
 
 var cancelPendingActionState = {
-  selectedCoords: null,
   pendingAction: null,
   showMenu: false,
 };
@@ -816,15 +817,16 @@ var App = React.createClass({
 
     if (creatingUnit) {
       this.setState({
+        ...cancelPendingActionState,
         mouseDown: true,
         map: forceAddNewUnit(map, i, j, consoleSelectedColor, consoleSelectedUnit),
       });
+      console.log('aaasd');
       return;
     }
 
-    var destColor = M.getIn(map, [i, j, 'color']);
     if (phase !== 'Player' ||
-      (!pendingAction && destColor !== turns[currTurn]) ||
+      (!pendingAction && getColor(map, i, j) !== turns[currTurn]) ||
       currTurn !== selfTurn) {
       this.setState(cancelPendingActionState);
       return;
@@ -952,7 +954,7 @@ var App = React.createClass({
           </Menu>
         );
       } else if (typeName2) {
-        var config = M.getIn(map, [i, j, 'units']);
+        var config = getUnits(map, i, j);
         var gold = M.getIn(config, [typeName2, 'gold']);
         var wood = M.getIn(config, [typeName2, 'wood']);
         maybeMenu = (

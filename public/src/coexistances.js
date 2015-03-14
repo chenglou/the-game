@@ -1,3 +1,5 @@
+'use strict';
+
 var coexistances = {
   'Hovel': ['Grass', 'Watchtower'],
   'Town': ['Grass', 'Watchtower'],
@@ -27,7 +29,7 @@ var coexistances = {
 };
 
 for (var key in coexistances) {
-  coexistances[key] = coexistances[key].reduce(function(acc, unit) {
+  coexistances[key] = coexistances[key].reduce((acc, unit) => {
     acc[unit] = true;
     return acc;
   }, {});

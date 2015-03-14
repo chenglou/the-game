@@ -1,3 +1,5 @@
+'use strict';
+
 var React = require('react');
 
 var p = React.PropTypes;
@@ -25,6 +27,8 @@ var Badge = React.createClass({
       minWidth: 12,
       textAlign: 'center',
       top: 8,
+      display: 'inline-block',
+      position: 'absolute',
     };
 
     return (

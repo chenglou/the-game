@@ -4,8 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "node_modules/.bin/mocha 'src/**/*-test.js'",
-    "build": "node_modules/.bin/webpack --watch -d",
+    "test": "mocha 'src/**/*-test.js'",
+    "build": " webpack --watch -d",
     "start": "node server.js",
     "mongo": "mongod --config ./.mongod.conf &"
   },

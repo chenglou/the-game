@@ -27,7 +27,7 @@ var UnitWrapper = React.createClass({
       width: imgW,
       height: imgH,
       marginLeft: (positioner.calcW() - imgW) / 2,
-      // marginTop: (positioner.calcH() - imgH) / 2,
+      position: 'relative',
     };
 
     return (

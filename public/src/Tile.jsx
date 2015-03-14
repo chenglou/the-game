@@ -1,3 +1,5 @@
+'use strict';
+
 var React = require('react');
 var positioner = require('./map/positioner');
 
@@ -9,10 +11,9 @@ var Tile = React.createClass({
   },
 
   render: function() {
-    var props = this.props;
-    var [y, x] = props.pos;
+    let {pos: [y, x], children, ...props} = this.props;
 
-    var s = {
+    let s = {
       height: positioner.calcH(),
       width: positioner.calcW(),
       left: positioner.calcLeft(x, y),
@@ -21,7 +22,7 @@ var Tile = React.createClass({
 
     return (
       <div {...props} style={s}>
-        {props.children}
+        {children}
       </div>
     );
   }

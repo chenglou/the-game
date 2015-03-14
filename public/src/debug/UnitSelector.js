@@ -1,8 +1,7 @@
 'use strict';
 
-var assetDims = require('../assetDims');
-var assetUrls = require('../assetUrls');
 var everyUnit = require('../everyUnit');
+var everyUnitDefaultConfigDebug = require('./everyUnitDefaultConfigDebug');
 var React = require('react');
 
 var p = React.PropTypes;
@@ -31,16 +30,11 @@ var LandBox = React.createClass({
       color: selected ? 'red' : 'gray',
     };
 
-    let {w, h} = assetDims[unitName];
-    let imgS = {
-      width: w,
-      height: h,
-      alignSelf: 'center',
-    };
+    let Unit = everyUnit.comp[unitName];
 
     return (
       <div {...props} style={s}>
-        <img src={'./out/' + assetUrls[unitName]} style={imgS} />
+        <Unit {...everyUnitDefaultConfigDebug[unitName]}></Unit>
         <div style={labelS}>
           {unitName}
         </div>

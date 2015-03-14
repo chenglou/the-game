@@ -1,29 +1,23 @@
+'use strict';
+
 var mapSeqToVec = require('../mapSeqToVec');
-var coexistances = require('../coexistances');
-var everyUnit = require('../everyUnit');
+var everyUnitDefaultConfigDebug = require('./everyUnitDefaultConfigDebug');
+var getConflicts = require('../getConflicts');
 var dissocIn = require('../utils/dissocIn');
 var M = require('mori');
 
-function getConflicta(map, unitName, i, j) {
-  return M.filter(conflict => {
-    return coexistances[conflict][unitName] ? null : conflict;
-  }, M.keys(M.getIn(map, [i, j, 'units'])));
-}
-
-// removes every conflicting unit on map
+// removes every conflicting unit on map and add the new unit
+// special processing for meadow and road (0 cooldown)
 function forceAddNewUnit(map, i, j, color, unitName) {
   map = mapSeqToVec(map);
 
   map = M.reduce((map, unitName) => {
     return dissocIn(map, [i, j, 'units', unitName]);
-  }, map, getConflicta(map, unitName, i, j));
+  }, map, getConflicts(map, unitName, i, j));
 
   map = M.assocIn(map, [i, j, 'color'], color);
 
-  var config = M.toClj(everyUnit.defaultConfig[unitName]);
-  if (unitName === 'Meadow' || unitName === 'Road') {
-    config = M.update(config, 'cooldown', 0);
-  }
+  var config = M.toClj(everyUnitDefaultConfigDebug[unitName]);
 
   return M.assocIn(map, [i, j, 'units', unitName], config);
 }
