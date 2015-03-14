@@ -2,6 +2,7 @@ var comp = {
   Hovel: require('./units/Hovel'),
   Town: require('./units/Town'),
   Fort: require('./units/Fort'),
+  Castle: require('./units/Castle'),
 
   Peasant: require('./units/Peasant'),
   Infantry: require('./units/Infantry'),
@@ -24,6 +25,7 @@ var nameInDisplayOrder = {
   Hovel: 2,
   Town: 2,
   Fort: 2,
+  Castle: 2,
 
   Road: 3,
 
@@ -47,6 +49,7 @@ var rank = {
   Hovel: 2,
   Town: 3,
   Fort: 4,
+  Castle: 99,
 
   Peasant: 1,
   Infantry: 2,
@@ -63,6 +66,7 @@ var defaultConfig = {
   Hovel: {gold: 7, wood: 0},
   Town: {gold: 7, wood: 0},
   Fort: {gold: 7, wood: 0},
+  Castle: {gold: 7, wood: 0},
 
   Road: {cooldown: 1},
   Meadow: {cooldown: 2},

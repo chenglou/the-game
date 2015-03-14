@@ -2,6 +2,7 @@ var assetDims = {
   Fort: [65, 68],
   Grass: [65, 89],
   Hovel: [65, 68],
+  Castle: [65, 92],
   Infantry: [40, 66],
   Knight: [40, 66],
   Meadow: [36, 33],

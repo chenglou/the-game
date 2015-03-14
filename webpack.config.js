@@ -10,8 +10,8 @@ module.exports = {
   },
   module: {
     loaders: [
-      {test: /\.jsx?$/, exclude: /node_modules/, loader: 'babel-loader?experimental'},
-      {test: /\.(png|jpg)$/, exclude: /node_modules/, loader: 'url-loader?limit=1'},
+      {test: /\.jsx?$/, include: /public/, exclude: /out/, loader: 'babel-loader?experimental'},
+      {test: /\.(png|jpg)$/, include: /public/, exclude: /out/, loader: 'url-loader?limit=1'},
     ]
   },
   resolve: {

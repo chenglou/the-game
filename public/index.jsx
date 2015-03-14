@@ -322,7 +322,7 @@ function getMenuItemsForVillage(typeName, gold, wood, cb) {
   });
 }
 
-function getMenuItemsForVillager(typeName, {hasMoved, cooldown}, cb) {
+function getMenuItemsForVillager(typeName, {hasMoved, cooldown}, gold, wood, cb) {
   if (hasMoved) {
     return [
       <MenuItem key="hasMoved" disabled={true}>
@@ -338,9 +338,17 @@ function getMenuItemsForVillager(typeName, {hasMoved, cooldown}, cb) {
     ];
   }
 
-  return pendingActions.Villager[typeName].map(([desc, action]) => {
+  return pendingActions.Villager[typeName].map(([desc, action, goldReq, woodReq]) => {
+    if (gold >= goldReq && wood >= woodReq) {
+      return (
+        <MenuItem key={action} onClick={cb.bind(null, action)}>
+          {desc}
+        </MenuItem>
+      );
+    }
+
     return (
-      <MenuItem key={action} onClick={cb.bind(null, action)} disabled={false}>
+      <MenuItem key={action} disabled={true}>
         {desc}
       </MenuItem>
     );
@@ -523,6 +531,21 @@ function upgradeVillage(map, [i, j]) {
 
   map = dissocIn(map, [i, j, 'units', typeName]);
   return M.assocIn(map, [i, j, 'units', newTypeName], newType);
+}
+
+function upgradeVillager(map, villageCoords, selectedCoords, nextUnitName, amout) {
+  map = mapSeqToVec(map);
+
+  var [si, sj] = selectedCoords;
+  var [vi, vj] = villageCoords;
+  var [type, typeName] = getMaybeVillager(map, si, sj);
+  var [type2, typeName2] = getMaybeVillage(map, vi, vj);
+
+  map = M.updateIn(map, [vi, vj, 'units', typeName2, 'gold'], add(amount));
+
+  map = dissocIn(map, [si, sj, 'units', typeName]);
+  // TODO: keep cooldown or not?
+  return M.assocIn(map, [si, sj, 'units', nextUnitName], type);
 }
 
 // -------------------------- menu actions over
@@ -788,16 +811,31 @@ var App = React.createClass({
       return;
     }
 
+    var newMap;
     if (action === 'upgradeVillage') {
-      this.setState({
-        ...cancelPendingActionState,
-        map: upgradeVillage(map, selectedCoords),
-      }, this.setFb);
+      newMap = upgradeVillage(map, selectedCoords);
     } else if (action === 'cultivateMeadow') {
       //
     } else if (action === 'buildRoad') {
       //
+    } else if (action === 'upgradeToInfantry') {
+      let region = findRegion(map, ...selectedCoords);
+      let villageCoords = findVillageInRegion(map, region);
+      newMap = upgradeVillager(map, villageCoords, selectedCoords, 'Infantry', 10);
+    } else if (action === 'upgradeToSoldier') {
+      let region = findRegion(map, ...selectedCoords);
+      let villageCoords = findVillageInRegion(map, region);
+      newMap = upgradeVillager(map, villageCoords, selectedCoords, 'Soldier', 10);
+    } else if (action === 'upgradeToKnight') {
+      let region = findRegion(map, ...selectedCoords);
+      let villageCoords = findVillageInRegion(map, region);
+      newMap = upgradeVillager(map, villageCoords, selectedCoords, 'Knight', 10);
     }
+
+    this.setState({
+      ...cancelPendingActionState,
+      map: newMap,
+    }, this.setFb);
   },
 
   handleTileMouseDown: function(i, j) {
@@ -821,7 +859,6 @@ var App = React.createClass({
         mouseDown: true,
         map: forceAddNewUnit(map, i, j, consoleSelectedColor, consoleSelectedUnit),
       });
-      console.log('aaasd');
       return;
     }
 
@@ -948,9 +985,19 @@ var App = React.createClass({
       let y = positioner.calcTop(i);
 
       if (typeName) {
+        let region = findRegion(map, i, j);
+        let [vi, vj] = findVillageInRegion(map, region);
+        let [type3, typeName3] = getMaybeVillage(map, vi, vj);
+
         maybeMenu = (
           <Menu pos={[x, y]}>
-            {getMenuItemsForVillager(typeName, js(type), this.handleMenuItemClick)}
+            {getMenuItemsForVillager(
+              typeName,
+              js(type),
+              M.get(type3, 'gold'),
+              M.get(type3, 'wood'),
+              this.handleMenuItemClick
+            )}
           </Menu>
         );
       } else if (typeName2) {

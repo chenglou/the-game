@@ -4,6 +4,7 @@ var coexistances = {
   'Hovel': ['Grass', 'Watchtower'],
   'Town': ['Grass', 'Watchtower'],
   'Fort': ['Grass', 'Watchtower'],
+  'Castle': ['Grass', 'Watchtower'],
 
   'Peasant': ['Grass', 'Meadow', 'Road'],
   'Infantry': ['Grass', 'Meadow', 'Road'],
@@ -11,7 +12,7 @@ var coexistances = {
   'Knight': ['Grass', 'Meadow', 'Road'],
 
   'Grass': [
-    'Hovel', 'Town', 'Fort', 'Peasant', 'Infantry', 'Soldier', 'Knight', 'Tree',
+    'Hovel', 'Town', 'Fort', 'Castle', 'Peasant', 'Infantry', 'Soldier', 'Knight', 'Tree',
     'Meadow', 'Watchtower', 'Road', 'Tombstone'
   ],
   'Meadow': [
@@ -25,7 +26,7 @@ var coexistances = {
   'Sea': [],
   'Tombstone': ['Grass', 'Meadow', 'Road'],
   'Tree': ['Grass'],
-  'Watchtower': ['Hovel', 'Town', 'Fort', 'Grass', 'Meadow', 'Road'],
+  'Watchtower': ['Hovel', 'Town', 'Fort', 'Castle', 'Grass', 'Meadow', 'Road'],
 };
 
 for (var key in coexistances) {
