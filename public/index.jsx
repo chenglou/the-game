@@ -895,7 +895,7 @@ var App = React.createClass({
     }
 
     var map = this.state.map;
-    var grassTileConfig = clj({
+    var grassConfig = clj({
       units: {
         Grass: everyUnit.defaultConfig.Grass,
       },
@@ -904,10 +904,10 @@ var App = React.createClass({
 
     if (prop === 'w') {
       map = M.map((row) => {
-        return M.take(val, M.concat(row, M.repeat(grassTileConfig)));
+        return M.take(val, M.concat(row, M.repeat(grassConfig)));
       }, map);
     } else {
-      var row = M.repeat(val, grassTileConfig);
+      var row = M.repeat(val, grassConfig);
       map = M.take(val, M.concat(map, M.repeat(row)));
     }
 
@@ -993,8 +993,9 @@ var App = React.createClass({
         fbEmptySlots: '...',
         history: '...',
       };
-      let w = M.count(map);
-      let h = M.count(M.first(map));
+      let h = M.count(map);
+      let w = M.count(M.first(map));
+
       maybeConsole =
         <div style={consoleS}>
           <input
@@ -1023,13 +1024,13 @@ var App = React.createClass({
           <input
             type="range"
             value={w}
-            max={50}
+            max={40}
             onChange={this.handleConsoleWHChange.bind(null, 'w')} />
           <span>width {w}</span>
           <input
             type="range"
             value={h}
-            max={50}
+            max={40}
             onChange={this.handleConsoleWHChange.bind(null, 'h')} />
           <span>height {h}</span>
         </div>;
