@@ -329,13 +329,13 @@ function findVillageInRegion(map, region) {
   return region.filter(([i, j]) => getVillage(map, i, j))[0];
 }
 
-function cultivateMeadow(map, [i, j]) {
-  if (hasConflict(map, 'Meadow', i, j)) {
+function build(map, [i, j], unitName, unitCooldown) {
+  if (hasConflict(map, unitName, i, j)) {
     return map;
   }
 
-  map = M.assocIn(map, [i, j, 'units', 'Meadow'], clj(defaultConfig.Meadow));
-  return M.assocIn(map, [i, j, 'units', 'Villager', 'cooldown'], 2);
+  map = M.assocIn(map, [i, j, 'units', unitName], clj(defaultConfig[unitName]));
+  return M.assocIn(map, [i, j, 'units', 'Villager', 'cooldown'], unitCooldown);
 }
 
 function move(map, [di, dj], [ui, uj]) {
@@ -711,9 +711,9 @@ var App = React.createClass({
     if (action === 'upgradeVillage') {
       newMap = upgradeVillage(map, selectedCoords);
     } else if (action === 'cultivateMeadow') {
-      newMap = cultivateMeadow(map, selectedCoords);
+      newMap = build(map, selectedCoords, 'Meadow', 2);
     } else if (action === 'buildRoad') {
-      //
+      newMap = build(map, selectedCoords, 'Road', 1);
     } else if (action === 'upgradeVillager') {
       let region = findRegion(map, ...selectedCoords);
       let villageCoords = findVillageInRegion(map, region);
