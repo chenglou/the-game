@@ -325,6 +325,23 @@ function newVillager(map, [di, dj], [vi, vj], unitName, gold) {
   );
 }
 
+function newWatchtower(map, [di, dj], [vi, vj]) {
+  var clickedInRegion = findRegion(map, vi, vj)
+    .some(([i2, j2]) => di === i2 && dj === j2);
+
+  if (!clickedInRegion || hasConflict(map, 'Watchtower', di, dj)) {
+    return map;
+  }
+
+  map = M.updateIn(map, [vi, vj, 'units', 'Village', 'wood'], add(-5));
+
+  return M.assocIn(
+    map,
+    [di, dj, 'units', 'Watchtower'],
+    clj(defaultConfig.Watchtower)
+  );
+}
+
 function findVillageInRegion(map, region) {
   return region.filter(([i, j]) => getVillage(map, i, j))[0];
 }
@@ -768,6 +785,7 @@ var App = React.createClass({
 
     var newMap;
     if (pendingAction === 'newPeasant') {
+      // TODO money already in actions
       newMap = newVillager(map, [i, j], selectedCoords, 'Peasant', 10);
     } else if (pendingAction === 'newInfantry') {
       newMap = newVillager(map, [i, j], selectedCoords, 'Infantry', 20);
@@ -777,6 +795,8 @@ var App = React.createClass({
       newMap = newVillager(map, [i, j], selectedCoords, 'Knight', 40);
     } else if (pendingAction === 'move') {
       newMap = move(map, [i, j], selectedCoords);
+    } else if (pendingAction === 'newWatchtower') {
+      newMap = newWatchtower(map, [i, j], selectedCoords);
     }
 
     this.setState({
