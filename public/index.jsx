@@ -10,7 +10,7 @@ var add = require('./src/utils/add');
 var findNeighbors = require('./src/findNeighbors');
 var getConflicts = require('./src/getConflicts');
 var positioner = require('./src/map/positioner');
-var everyUnit = require('./src/everyUnit');
+var {defaultConfig} = require('./src/everyUnit');
 var rankers = require('./src/rankers');
 var {pendingActions, immediateActions} = require('./src/actions');
 var Firebase = require('firebase');
@@ -38,10 +38,6 @@ function getColor(map, i, j) {
   return M.getIn(map, [i, j, 'color']);
 }
 
-function getUnits(map, i, j) {
-  return M.getIn(map, [i, j, 'units']);
-}
-
 function getUnitsByColorAndName(map, turn, unitName) {
   return M.filter(
     ([i, j]) => M.getIn(map, [i, j, 'color']) === turn,
@@ -50,9 +46,11 @@ function getUnitsByColorAndName(map, turn, unitName) {
 }
 
 function updateMap(map, coordsList, f) {
-  return M.reduce((map, coords) => {
-    return M.updateIn(map, coords, (cell) => f(cell, ...coords));
-  }, map, coordsList);
+  return M.reduce(
+    (map, coords) => M.updateIn(map, coords, f),
+    map,
+    coordsList
+  );
 }
 
 // these two functions are, like, syntax magic
@@ -97,7 +95,7 @@ function growTrees(map) {
     }
 
     var [i2, j2] = randNth(emptyNeighbors);
-    return M.assocIn(map, [i2, j2, 'units', 'Tree'], clj(everyUnit.defaultConfig.Tree));
+    return M.assocIn(map, [i2, j2, 'units', 'Tree'], clj(defaultConfig.Tree));
   }, map, treeCoords);
 }
 
@@ -116,7 +114,7 @@ function killTombstones(map, turn) {
 
       return hasMeadow || hasRoadWith0Cooldown
         ? cell
-        : M.assocIn(cell, ['units', 'Tree'], clj(everyUnit.defaultConfig.Tree));
+        : M.assocIn(cell, ['units', 'Tree'], clj(defaultConfig.Tree));
     }
   );
 }
@@ -125,7 +123,7 @@ function resetUnitMoves(map, turn) {
   return updateMap(
     map,
     getUnitsByColorAndName(map, turn, 'Villager'),
-    (cell, i, j) => M.assocIn(cell, ['units', 'Villager', 'hasMoved'], false)
+    cell => M.assocIn(cell, ['units', 'Villager', 'hasMoved'], false)
   );
 }
 
@@ -139,7 +137,7 @@ function matureBuilt(map, turn, unitName) {
     map,
     getUnitsByColorAndName(map, turn, unitName),
     cell => {
-      return M.updateIn(cell, ['units', unitName, 'cooldown'], (cooldown) => {
+      return M.updateIn(cell, ['units', unitName, 'cooldown'], cooldown => {
         return cooldown ? cooldown - 1 : 0;
       });
     }
@@ -170,13 +168,14 @@ function findRegion(map, i, j) {
 function addIncome(map, turn) {
   return M.reduce((map, [i, j]) => {
     var sum = findRegion(map, i, j).reduce((sum, [i, j]) => {
-      var config = getUnits(map, i, j);
-      var get = (unitName) => M.get(config, unitName);
+      let hasTree = M.getIn(map, [i, j, 'units', 'Tree']);
+      let hasMeadowWith0Cooldown =
+        M.getIn(map, [i, j, 'units', 'Meadow', 'cooldown']) === 0;
 
       // this is only determined by the land type (sea, grass, meadow, tree)
       // conceptually tree is a landtype
-      var amount = get('Tree') ? 0
-        : get('Meadow') && M.get(get('Meadow'), 'cooldown') === 0 ? 2
+      let amount = hasTree ? 0
+        : hasMeadowWith0Cooldown ? 2
         : 1;
 
       return sum + amount;
@@ -196,7 +195,7 @@ function payTime(map, turn) {
 
       let villagerName = rankers.villagerByRank[rank];
 
-      return sum + (rankers.upkeep[villagerName]);
+      return sum + rankers.upkeep[villagerName];
     }, 0);
 
     return M.updateIn(map, [i, j, 'units', 'Village', 'gold'], add(-sum));
@@ -220,7 +219,7 @@ function dieTime(map, turn) {
         return M.assocIn(
           map,
           [i, j, 'units', 'Tombstone'],
-          clj(everyUnit.defaultConfig.Tombstone)
+          clj(defaultConfig.Tombstone)
         );
       }, map);
 
@@ -317,7 +316,7 @@ function newVillager(map, [di, dj], [vi, vj], unitName, gold) {
   return M.assocIn(
     map,
     [di, dj, 'units', 'Villager'],
-    clj(everyUnit.defaultConfig.Villager)
+    clj(defaultConfig.Villager)
   );
 }
 
@@ -524,12 +523,12 @@ var App = React.createClass({
     }
 
     var steps = [
-      [(map, turn) => growTrees(map), 'Tree Growth', 0],
-      [(map, turn) => resetUnitMoves(map, turn), '', 0],
-      [(map, turn) => killTombstones(map, turn), 'Kill Tombstones', 0],
-      [(map, turn) => matureTiles(map, turn), 'Builds', 400],
-      [(map, turn) => addIncome(map, turn), 'Generate Income', 400],
-      [(map, turn) => payOrDie(map, turn), 'Payment', 400],
+      [growTrees, 'Tree Growth', 0],
+      [resetUnitMoves, '', 0],
+      [killTombstones, 'Kill Tombstones', 0],
+      [matureTiles, 'Builds', 400],
+      [addIncome, 'Generate Income', 400],
+      [payOrDie, 'Payment', 400],
     ];
 
     let doStep = (steps) => {
@@ -812,7 +811,7 @@ var App = React.createClass({
     var map = this.state.map;
     var grassConfig = clj({
       units: {
-        Grass: everyUnit.defaultConfig.Grass,
+        Grass: defaultConfig.Grass,
       },
       color: 'Gray',
     });
@@ -930,15 +929,13 @@ var App = React.createClass({
             max={history.length - 1} />
 
           <div onClick={this.handleResetGame}>Reset Game</div>
-          <pre style={{fontSize: 12}}>
+          <pre style={{fontSize: 12, overflow: 'scroll', height: 50, float: 'left'}}>
             {JSON.stringify(stateToDisplay, null, 2)}
           </pre>
           <textarea
-            style={{WebkitUserSelect: 'inherit'}}
+            style={{WebkitUserSelect: 'inherit', width: 350, height: 60}}
             value={JSON.stringify(js(map))}
-            onChange={this.handleConsoleTextAreaChange}
-            cols={120}
-            rows={5} />
+            onChange={this.handleConsoleTextAreaChange} />
           <UnitSelector
             unitName={consoleSelectedUnit}
             color={consoleSelectedColor}
