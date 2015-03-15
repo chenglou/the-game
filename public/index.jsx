@@ -61,13 +61,19 @@ function updateMap(map, coordsList, f) {
   }, map, coordsList);
 }
 
-
+// these two functions are, like, syntax magic
+function ve(i, j) {
+  return [i, j, 'units', 'Village'];
+}
+function vr(i, j) {
+  return [i, j, 'units', 'Villager'];
+}
 function getVillage(map, i, j) {
-  return M.getIn(map, [i, j, 'units', 'Village']);
+  return M.getIn(map, ve(i, j));
 }
 
 function getVillager(map, i, j) {
-  return M.getIn(map, [i, j, 'units', 'Villager']);
+  return M.getIn(map, vr(i, j));
 }
 
 // ----------- phases
@@ -492,22 +498,10 @@ var veryFirstState = {
   selfTurn: 0,
 };
 
-// test helper
-function setInitialVillagesGold(map, amount) {
-  var villageCoords = filterMap(map, (cell, i, j) => getVillage(map, i, j));
-
-  return updateMap(map, villageCoords, (cell, i, j) => {
-    cell = M.updateIn(cell, ['units', 'Village', 'wood'], add(amount));
-    return M.updateIn(cell, ['units', 'Village', 'gold'], add(amount));
-  });
-}
-
 var App = React.createClass({
   getInitialState: function() {
     var map = M.vector(M.vector());
     var fireBaseBaseUrl = 'https://blistering-heat-9706.firebaseio.com/';
-    // TODO: remove
-    // map = setInitialVillagesGold(map, 70);
 
     return {
       // to sync. the real initialization is in didMount
