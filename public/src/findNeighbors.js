@@ -1,10 +1,6 @@
 var M = require('mori');
-var mapSeqToVec = require('./mapSeqToVec');
 
 function findNeighbors(map, i, j) {
-  var map = mapSeqToVec(map);
-
-  var oddJ = j % 2 === 1;
   var oddI = i % 2 === 1;
 
   var topLeft = [i - 1, oddI ? j : j - 1];

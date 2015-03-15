@@ -8,7 +8,6 @@ var dissocIn = require('./src/utils/dissocIn');
 var randNth = require('./src/utils/randNth');
 var add = require('./src/utils/add');
 var findNeighbors = require('./src/findNeighbors');
-var mapSeqToVec = require('./src/mapSeqToVec');
 var getConflicts = require('./src/getConflicts');
 var positioner = require('./src/map/positioner');
 var everyUnit = require('./src/everyUnit');
@@ -24,12 +23,10 @@ var map1 = require('./src/map/data/map1');
 var js = M.toJs;
 var clj = M.toClj;
 
-function filterMap(map, f) {
-  map = mapSeqToVec(map);
-
+function getUnitsByName(map, unitName) {
   return M.mapcat((row, i) => {
     var maybeCoords = M.map((cell, j) => {
-      return f(cell, i, j) ? [i, j] : null;
+      return M.getIn(map, [i, j, 'units', unitName]) ? [i, j] : null;
     }, row, M.range());
 
     return M.filter(M.identity, maybeCoords);
@@ -38,24 +35,21 @@ function filterMap(map, f) {
 
 // helper
 function getColor(map, i, j) {
-  map = mapSeqToVec(map);
   return M.getIn(map, [i, j, 'color']);
 }
 
 function getUnits(map, i, j) {
-  map = mapSeqToVec(map);
   return M.getIn(map, [i, j, 'units']);
 }
 
 function getUnitsByColorAndName(map, turn, unitName) {
-  return filterMap(map, (cell, i, j) => {
-    return M.get(cell, 'color') === turn && M.getIn(cell, ['units', unitName]);
-  });
+  return M.filter(
+    ([i, j]) => M.getIn(map, [i, j, 'color']) === turn,
+    getUnitsByName(map, unitName)
+  );
 }
 
 function updateMap(map, coordsList, f) {
-  map = mapSeqToVec(map);
-
   return M.reduce((map, coords) => {
     return M.updateIn(map, coords, (cell) => f(cell, ...coords));
   }, map, coordsList);
@@ -82,8 +76,6 @@ function getVillager(map, i, j) {
 // matures
 // TODO: use after invasion cuts off land
 function killGrayMeadowCooldowns(map) {
-  map = mapSeqToVec(map);
-
   return updateMap(
     map,
     getUnitsByColorAndName(map, 'Gray', 'Meadow'),
@@ -92,9 +84,7 @@ function killGrayMeadowCooldowns(map) {
 }
 
 function growTrees(map) {
-  map = mapSeqToVec(map);
-
-  var treeCoords = filterMap(map, (cell) => M.getIn(cell, ['units', 'Tree']));
+  var treeCoords = getUnitsByName(map, 'Tree');
   treeCoords = M.filter(() => Math.random() > 0.5, treeCoords);
 
   return M.reduce((map, [i, j]) => {
@@ -107,15 +97,11 @@ function growTrees(map) {
     }
 
     var [i2, j2] = randNth(emptyNeighbors);
-    return M.updateIn(map, [i2, j2, 'units'], (config) => {
-      return M.assoc(config, 'Tree', clj(everyUnit.defaultConfig.Tree));
-    });
+    return M.assocIn(map, [i2, j2, 'units', 'Tree'], clj(everyUnit.defaultConfig.Tree));
   }, map, treeCoords);
 }
 
 function killTombstones(map, turn) {
-  map = mapSeqToVec(map);
-
   return updateMap(
     map,
     getUnitsByColorAndName(map, turn, 'Tombstone'),
@@ -136,7 +122,6 @@ function killTombstones(map, turn) {
 }
 
 function resetUnitMoves(map, turn) {
-  map = mapSeqToVec(map);
   return updateMap(
     map,
     getUnitsByColorAndName(map, turn, 'Villager'),
@@ -162,8 +147,6 @@ function matureBuilt(map, turn, unitName) {
 }
 
 function findRegion(map, i, j) {
-  map = mapSeqToVec(map);
-
   var color = getColor(map, i, j);
 
   var visited = M.set();
@@ -185,8 +168,6 @@ function findRegion(map, i, j) {
 }
 
 function addIncome(map, turn) {
-  map = mapSeqToVec(map);
-
   return M.reduce((map, [i, j]) => {
     var sum = findRegion(map, i, j).reduce((sum, [i, j]) => {
       var config = getUnits(map, i, j);
@@ -206,8 +187,6 @@ function addIncome(map, turn) {
 }
 
 function payTime(map, turn) {
-  map = mapSeqToVec(map);
-
   return M.reduce((map, [i, j]) => {
     var sum = findRegion(map, i, j).reduce((sum, [i, j]) => {
       let rank = M.getIn(map, [i, j, 'units', 'Villager', 'rank']);
@@ -225,8 +204,6 @@ function payTime(map, turn) {
 }
 
 function dieTime(map, turn) {
-  map = mapSeqToVec(map);
-
   var poorVillageCoords = M.filter(([i, j]) => {
     return M.getIn(map, [i, j, 'units', 'Village', 'gold']) < 0;
   }, getUnitsByColorAndName(map, turn, 'Village'));
@@ -251,8 +228,6 @@ function dieTime(map, turn) {
 }
 
 function payOrDie(map, turn) {
-  map = mapSeqToVec(map);
-
   map = payTime(map, turn);
   return dieTime(map, turn);
 }
@@ -313,8 +288,6 @@ function getMenuItemsForVillager(unitName, {hasMoved, cooldown}, gold, wood, cb)
 // ---------------- state returners
 
 function maybeTrampleOnMeadow(map, unitName, [i, j]) {
-  map = mapSeqToVec(map);
-
   var hasMeadow = M.getIn(map, [i, j, 'units', 'Meadow']);
   var hasRoadWith0Cooldown =
     M.getIn(map, [i, j, 'units', 'Road', 'cooldown']) === 0;
@@ -330,8 +303,6 @@ function maybeTrampleOnMeadow(map, unitName, [i, j]) {
 }
 
 function newVillager(map, [di, dj], [vi, vj], unitName, gold) {
-  map = mapSeqToVec(map);
-
   var clickedInRegion = findRegion(map, vi, vj)
     .some(([i2, j2]) => di === i2 && dj === j2);
 
@@ -355,8 +326,6 @@ function findVillageInRegion(map, region) {
 }
 
 function move(map, [di, dj], [ui, uj]) {
-  map = mapSeqToVec(map);
-
   let villagerRank = M.getIn(map, [ui, uj, 'units', 'Villager', 'rank']);
   let unitName = rankers.villagerByRank[villagerRank];
 
@@ -469,16 +438,11 @@ function move(map, [di, dj], [ui, uj]) {
 }
 
 function upgradeVillage(map, [i, j]) {
-  // TODO: tired of this pattern
-  map = mapSeqToVec(map);
-
   map = M.updateIn(map, [i, j, 'units', 'Village', 'wood'], add(-8));
   return M.updateIn(map, [i, j, 'units', 'Village', 'rank'], add(1));
 }
 
 function upgradeVillager(map, [vi, vj], [si, sj]) {
-  map = mapSeqToVec(map);
-
   map = M.updateIn(map, [vi, vj, 'units', 'Village', 'gold'], add(-10));
   // TODO: keep cooldown or not?
   return M.updateIn(map, [si, sj, 'units', 'Villager', 'rank'], add(1));
