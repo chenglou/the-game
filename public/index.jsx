@@ -53,6 +53,10 @@ function updateMap(map, coordsList, f) {
   );
 }
 
+function findVillageInRegion(map, region) {
+  return region.filter(([i, j]) => getVillage(map, i, j))[0];
+}
+
 function hasConflict(map, unitName, i, j) {
   return !M.isEmpty(getConflicts(map, unitName, i, j));
 }
@@ -317,11 +321,12 @@ function newVillager(map, [di, dj], [vi, vj], unitName, gold) {
   map = maybeTrampleOnMeadow(map, unitName, [di, dj]);
 
   map = M.updateIn(map, [vi, vj, 'units', 'Village', 'gold'], add(-gold));
+  var rank = rankers.villagerByRank.indexOf(unitName);
 
   return M.assocIn(
     map,
     [di, dj, 'units', 'Villager'],
-    clj(defaultConfig.Villager)
+    M.assoc(clj(defaultConfig.Villager), 'rank', rank)
   );
 }
 
@@ -342,8 +347,41 @@ function newWatchtower(map, [di, dj], [vi, vj]) {
   );
 }
 
-function findVillageInRegion(map, region) {
-  return region.filter(([i, j]) => getVillage(map, i, j))[0];
+function combineVillagers(map, [di, dj], [ui, uj]) {
+  var clickedInRegion = findRegion(map, ui, uj)
+    .some(([i2, j2]) => di === i2 && dj === j2);
+
+  if (!clickedInRegion) {
+    return map;
+  }
+
+  var villager = getVillager(map, di, dj);
+  if (!villager) {
+    return map;
+  }
+
+  // 'merge rank': Peasant + Peasant = Infantry => 1 + 1 = 2
+  var v1MergeRank = M.getIn(map, [ui, uj, 'units', 'Villager', 'rank']) + 1;
+  var v2MergeRank = M.getIn(map, [di, dj, 'units', 'Villager', 'rank']) + 1;
+  var mergedRank = v1MergeRank + v2MergeRank;
+  var actualRank = mergedRank - 1;
+  var mergedName = rankers.villagerByRank[actualRank];
+
+  var [vi, vj] = findVillageInRegion(map, findRegion(map, ui, uj));
+  var villageRank = M.getIn(map, [vi, vj, 'units', 'Village', 'rank']);
+  var villageName = rankers.villageByRank[villageRank];
+
+  if (!rankers.villageCanProduce[villageName][mergedName]) {
+    return map;
+  }
+
+  // merge to the destination coordinates. clears cooldown, hasMoved
+  map = dissocIn(map, [ui, uj, 'units', 'Villager']);
+  return M.assocIn(
+    map,
+    [di, dj, 'units', 'Villager'],
+    M.assoc(clj(defaultConfig.Villager), 'rank', actualRank)
+  );
 }
 
 function build(map, [i, j], unitName, unitCooldown) {
@@ -797,6 +835,8 @@ var App = React.createClass({
       newMap = move(map, [i, j], selectedCoords);
     } else if (pendingAction === 'newWatchtower') {
       newMap = newWatchtower(map, [i, j], selectedCoords);
+    } else if (pendingAction === 'combineVillagers') {
+      newMap = combineVillagers(map, [i, j], selectedCoords);
     }
 
     this.setState({

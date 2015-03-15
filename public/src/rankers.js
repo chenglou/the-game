@@ -1,3 +1,5 @@
+var arrToSet = require('./utils/arrToSet');
+
 var villageByRank = ['Hovel', 'Town', 'Fort', 'Castle'];
 var villagerByRank = ['Peasant', 'Infantry', 'Soldier', 'Knight'];
 
@@ -10,4 +12,15 @@ var upkeep = {
   Cannon: 5,
 };
 
-module.exports = {villageByRank, villagerByRank, upkeep};
+var villageCanProduce = {
+  Hovel: ['Peasant', 'Infantry'],
+  Town: ['Peasant', 'Infantry', 'Soldier'],
+  Fort: ['Peasant', 'Infantry', 'Soldier', 'Knight', 'Cannon'],
+  Castle: ['Peasant', 'Infantry', 'Soldier', 'Knight', 'Cannon'],
+};
+
+for (var key in villageCanProduce) {
+  villageCanProduce[key] = arrToSet(villageCanProduce[key]);
+}
+
+module.exports = {villageByRank, villagerByRank, upkeep, villageCanProduce};

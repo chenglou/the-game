@@ -1,5 +1,7 @@
 'use strict';
 
+var arrToSet = require('./utils/arrToSet');
+
 var coexistances = {
   Village: ['Grass', 'Watchtower'],
   Villager: ['Grass', 'Meadow', 'Road'],
@@ -13,10 +15,7 @@ var coexistances = {
 };
 
 for (var key in coexistances) {
-  coexistances[key] = coexistances[key].reduce((acc, unit) => {
-    acc[unit] = true;
-    return acc;
-  }, {});
+  coexistances[key] = arrToSet(coexistances[key]);
 }
 
 module.exports = coexistances;
