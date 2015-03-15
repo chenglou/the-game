@@ -1,11 +1,11 @@
 var M = require('mori');
-var everyUnit = require('../everyUnit');
+var everyUnitDefaultConfigDebug = require('./everyUnitDefaultConfigDebug');
 var butLast = require('../utils/butLast');
 
 function surroundWithSea(map) {
   var seaTileConfig = M.toClj({
     units: {
-      Sea: everyUnit.defaultConfig.Sea,
+      Sea: everyUnitDefaultConfigDebug.Sea,
     },
     color: 'Gray',
   });

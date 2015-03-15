@@ -74,7 +74,7 @@ var UnitSelector = React.createClass({
 
     return (
       <div {...props} style={s}>
-        {Object.keys(everyUnit.nameInDisplayOrder).map((unitName2) => {
+        {Object.keys(everyUnit.nameInDisplayOrder).map(unitName2 => {
           return (
             <LandBox
               key={unitName2}

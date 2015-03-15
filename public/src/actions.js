@@ -28,17 +28,17 @@ var pendingActions = {
       ['Move', 'move', 0, 0],
       ['Cultivate Meadow', 'cultivateMeadow', 0, 0],
       ['Build Road', 'buildRoad', 0, 0],
-      ['Upgrade to Infantry', 'upgradeToInfantry', 10, 0],
+      ['Upgrade to Infantry', 'upgradeVillager', 10, 0],
     ],
     Infantry: [
       ['Move', 'move', 0, 0],
-      ['Upgrade to Soldier', 'upgradeToSoldier', 10, 0],
+      ['Upgrade to Soldier', 'upgradeVillager', 10, 0],
       // ['Kill', 'kill'],
     ],
     Soldier: [
       // tramples meadow unless there's a road
       ['Move', 'move', 0, 0],
-      ['Upgrade to Knight', 'upgradeToKnight', 10, 0],
+      ['Upgrade to Knight', 'upgradeVillager', 10, 0],
       // ['Kill', 'kill'],
     ],
     Knight: [
@@ -53,9 +53,7 @@ var immediateActions = {
   cultivateMeadow: true,
   buildRoad: true,
   upgradeVillage: true,
-  upgradeToInfantry: true,
-  upgradeToSoldier: true,
-  upgradeToKnight: true,
+  upgradeVillager: true,
 };
 
 module.exports = {pendingActions, immediateActions};

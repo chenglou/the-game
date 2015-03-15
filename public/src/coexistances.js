@@ -1,32 +1,15 @@
 'use strict';
 
 var coexistances = {
-  'Hovel': ['Grass', 'Watchtower'],
-  'Town': ['Grass', 'Watchtower'],
-  'Fort': ['Grass', 'Watchtower'],
-  'Castle': ['Grass', 'Watchtower'],
-
-  'Peasant': ['Grass', 'Meadow', 'Road'],
-  'Infantry': ['Grass', 'Meadow', 'Road'],
-  'Soldier': ['Grass', 'Meadow', 'Road'],
-  'Knight': ['Grass', 'Meadow', 'Road'],
-
-  'Grass': [
-    'Hovel', 'Town', 'Fort', 'Castle', 'Peasant', 'Infantry', 'Soldier', 'Knight', 'Tree',
-    'Meadow', 'Watchtower', 'Road', 'Tombstone'
-  ],
-  'Meadow': [
-    'Peasant', 'Infantry', 'Soldier', 'Knight', 'Grass', 'Watchtower',
-    'Tombstone', 'Road'
-  ],
-  'Road': [
-    'Peasant', 'Infantry', 'Soldier', 'Knight', 'Grass', 'Watchtower',
-    'Tombstone', 'Meadow'
-  ],
-  'Sea': [],
-  'Tombstone': ['Grass', 'Meadow', 'Road'],
-  'Tree': ['Grass'],
-  'Watchtower': ['Hovel', 'Town', 'Fort', 'Castle', 'Grass', 'Meadow', 'Road'],
+  Village: ['Grass', 'Watchtower'],
+  Villager: ['Grass', 'Meadow', 'Road'],
+  Grass: ['Village', 'Tree', 'Meadow', 'Watchtower', 'Road', 'Tombstone', 'Villager'],
+  Meadow: ['Grass', 'Watchtower', 'Tombstone', 'Road', 'Villager'],
+  Road: ['Grass', 'Watchtower', 'Tombstone', 'Meadow', 'Villager'],
+  Sea: [],
+  Tombstone: ['Grass', 'Meadow', 'Road'],
+  Tree: ['Grass'],
+  Watchtower: ['Village', 'Grass', 'Meadow', 'Road'],
 };
 
 for (var key in coexistances) {

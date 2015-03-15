@@ -1,14 +1,6 @@
 var comp = {
-  Hovel: require('./units/Hovel'),
-  Town: require('./units/Town'),
-  Fort: require('./units/Fort'),
-  Castle: require('./units/Castle'),
-
-  Peasant: require('./units/Peasant'),
-  Infantry: require('./units/Infantry'),
-  Soldier: require('./units/Soldier'),
-  Knight: require('./units/Knight'),
-
+  Village: require('./units/Village'),
+  Villager: require('./units/Villager'),
   Grass: require('./units/Grass'),
   Meadow: require('./units/Meadow'),
   Road: require('./units/Road'),
@@ -22,24 +14,15 @@ var nameInDisplayOrder = {
   Grass: 1,
   Sea: 1,
 
-  Hovel: 2,
-  Town: 2,
-  Fort: 2,
-  Castle: 2,
-
+  Village: 2,
   Road: 3,
 
   Meadow: 4,
   Tree: 4,
 
   Tombstone: 5,
-
   Watchtower: 6,
-
-  Peasant: 7,
-  Infantry: 7,
-  Soldier: 7,
-  Knight: 7,
+  Villager: 7,
 };
 
 var rank = {
@@ -62,23 +45,13 @@ var rank = {
 var defaultConfig = {
   Grass: {},
   Sea: {},
-
-  Hovel: {gold: 7, wood: 0},
-  Town: {gold: 7, wood: 0},
-  Fort: {gold: 7, wood: 0},
-  Castle: {gold: 7, wood: 0},
-
+  Village: {gold: 7, wood: 0, rank: 0},
+  Villager: {hasMoved: false, cooldown: 0, rank: 0},
   Road: {cooldown: 1},
   Meadow: {cooldown: 2},
-
   Tree: {},
   Tombstone: {},
   Watchtower: {},
-
-  Peasant: {hasMoved: false, cooldown: 0},
-  Infantry: {hasMoved: false},
-  Soldier: {hasMoved: false},
-  Knight: {hasMoved: false},
 };
 
 module.exports = {nameInDisplayOrder, comp, rank, defaultConfig};
