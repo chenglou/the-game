@@ -53,6 +53,10 @@ function updateMap(map, coordsList, f) {
   );
 }
 
+function hasConflict(map, unitName, i, j) {
+  return !M.isEmpty(getConflicts(map, unitName, i, j));
+}
+
 // these two functions are, like, syntax magic
 function ve(i, j) {
   return [i, j, 'units', 'Village'];
@@ -82,13 +86,14 @@ function killGrayMeadowCooldowns(map) {
 }
 
 function growTrees(map) {
-  var treeCoords = getUnitsByName(map, 'Tree');
-  treeCoords = M.filter(() => Math.random() > 0.5, treeCoords);
+  let treeCoords = M.filter(
+    () => Math.random() > 0.5,
+    getUnitsByName(map, 'Tree')
+  );
 
   return M.reduce((map, [i, j]) => {
-    var emptyNeighbors = findNeighbors(map, i, j).filter(([i, j]) => {
-      return M.isEmpty(getConflicts(map, 'Tree', i, j));
-    });
+    var emptyNeighbors = findNeighbors(map, i, j)
+      .filter(([i, j]) => !hasConflict(map, 'Tree', i, j));
 
     if (emptyNeighbors.length === 0) {
       return map;
@@ -105,14 +110,12 @@ function killTombstones(map, turn) {
     getUnitsByColorAndName(map, turn, 'Tombstone'),
     cell => {
       cell = dissocIn(cell, ['units', 'Tombstone']);
-
-      // become a tree usually. ff it's on a road/meadow, then just make it
+      // become a tree usually. if it's on a road/meadow, then just make it
       // disappear (tree can't be on road/meadow)
       var hasMeadow = M.getIn(cell, ['units', 'Meadow']);
-      var hasRoadWith0Cooldown =
-        M.getIn(cell, ['units', 'Road', 'cooldown']) === 0;
+      var hasRoad = M.getIn(cell, ['units', 'Road']);
 
-      return hasMeadow || hasRoadWith0Cooldown
+      return hasMeadow || hasRoad
         ? cell
         : M.assocIn(cell, ['units', 'Tree'], clj(defaultConfig.Tree));
     }
@@ -129,6 +132,7 @@ function resetUnitMoves(map, turn) {
 
 function matureTiles(map, turn) {
   map = matureBuilt(map, turn, 'Meadow');
+  map = matureBuilt(map, turn, 'Villager');
   return matureBuilt(map, turn, 'Road');
 }
 
@@ -203,9 +207,10 @@ function payTime(map, turn) {
 }
 
 function dieTime(map, turn) {
-  var poorVillageCoords = M.filter(([i, j]) => {
-    return M.getIn(map, [i, j, 'units', 'Village', 'gold']) < 0;
-  }, getUnitsByColorAndName(map, turn, 'Village'));
+  var poorVillageCoords = M.filter(
+    ([i, j]) => M.getIn(map, [i, j, 'units', 'Village', 'gold']) < 0,
+    getUnitsByColorAndName(map, turn, 'Village')
+  );
 
   return M.reduce((map, [i, j]) => {
     // reset negative gold to 0
@@ -262,7 +267,7 @@ function getMenuItemsForVillager(unitName, {hasMoved, cooldown}, gold, wood, cb)
   if (cooldown > 0) {
     return [
       <MenuItem key="cooldown" disabled={true}>
-        Cooldown ({cooldown})
+        {`Cooldown (${cooldown})`}
       </MenuItem>
     ];
   }
@@ -305,7 +310,7 @@ function newVillager(map, [di, dj], [vi, vj], unitName, gold) {
   var clickedInRegion = findRegion(map, vi, vj)
     .some(([i2, j2]) => di === i2 && dj === j2);
 
-  if (!clickedInRegion || !M.isEmpty(getConflicts(map, 'Villager', di, dj))) {
+  if (!clickedInRegion || hasConflict(map, 'Villager', di, dj)) {
     return map;
   }
 
@@ -322,6 +327,15 @@ function newVillager(map, [di, dj], [vi, vj], unitName, gold) {
 
 function findVillageInRegion(map, region) {
   return region.filter(([i, j]) => getVillage(map, i, j))[0];
+}
+
+function cultivateMeadow(map, [i, j]) {
+  if (hasConflict(map, 'Meadow', i, j)) {
+    return map;
+  }
+
+  map = M.assocIn(map, [i, j, 'units', 'Meadow'], clj(defaultConfig.Meadow));
+  return M.assocIn(map, [i, j, 'units', 'Villager', 'cooldown'], 2);
 }
 
 function move(map, [di, dj], [ui, uj]) {
@@ -365,7 +379,7 @@ function move(map, [di, dj], [ui, uj]) {
 
   // check if unit can coexist on dest tile. this must be done after removing
   // tombstone and tree
-  if (!M.isEmpty(getConflicts(map, 'Villager', di, dj))) {
+  if (hasConflict(map, 'Villager', di, dj)) {
     return map;
   }
 
@@ -443,7 +457,6 @@ function upgradeVillage(map, [i, j]) {
 
 function upgradeVillager(map, [vi, vj], [si, sj]) {
   map = M.updateIn(map, [vi, vj, 'units', 'Village', 'gold'], add(-10));
-  // TODO: keep cooldown or not?
   return M.updateIn(map, [si, sj, 'units', 'Villager', 'rank'], add(1));
 }
 
@@ -698,7 +711,7 @@ var App = React.createClass({
     if (action === 'upgradeVillage') {
       newMap = upgradeVillage(map, selectedCoords);
     } else if (action === 'cultivateMeadow') {
-      //
+      newMap = cultivateMeadow(map, selectedCoords);
     } else if (action === 'buildRoad') {
       //
     } else if (action === 'upgradeVillager') {
