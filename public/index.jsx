@@ -61,6 +61,11 @@ function hasConflict(map, unitName, i, j) {
   return !M.isEmpty(getConflicts(map, unitName, i, j));
 }
 
+function coordsInRegion(map, [i, j], [ti, tj]) {
+  // ti, tj is the test coords. i, j actually in region
+  return findRegion(map, i, j).some(([i2, j2]) => ti === i2 && tj === j2);
+}
+
 // these two functions are, like, syntax magic
 function ve(i, j) {
   return [i, j, 'units', 'Village'];
@@ -311,10 +316,8 @@ function maybeTrampleOnMeadow(map, unitName, [i, j]) {
 }
 
 function newVillager(map, [di, dj], [vi, vj], unitName, gold) {
-  var clickedInRegion = findRegion(map, vi, vj)
-    .some(([i2, j2]) => di === i2 && dj === j2);
-
-  if (!clickedInRegion || hasConflict(map, 'Villager', di, dj)) {
+  if (!coordsInRegion(map, [vi, vj], [di, dj]) ||
+      hasConflict(map, 'Villager', di, dj)) {
     return map;
   }
 
@@ -331,10 +334,8 @@ function newVillager(map, [di, dj], [vi, vj], unitName, gold) {
 }
 
 function newWatchtower(map, [di, dj], [vi, vj]) {
-  var clickedInRegion = findRegion(map, vi, vj)
-    .some(([i2, j2]) => di === i2 && dj === j2);
-
-  if (!clickedInRegion || hasConflict(map, 'Watchtower', di, dj)) {
+  if (!coordsInRegion(map, [vi, vj], [di, dj]) ||
+      hasConflict(map, 'Watchtower', di, dj)) {
     return map;
   }
 
@@ -348,15 +349,8 @@ function newWatchtower(map, [di, dj], [vi, vj]) {
 }
 
 function combineVillagers(map, [di, dj], [ui, uj]) {
-  var clickedInRegion = findRegion(map, ui, uj)
-    .some(([i2, j2]) => di === i2 && dj === j2);
-
-  if (!clickedInRegion) {
-    return map;
-  }
-
-  var villager = getVillager(map, di, dj);
-  if (!villager) {
+  if (!coordsInRegion(map, [ui, uj], [di, dj]) ||
+      !getVillager(map, di, dj)) {
     return map;
   }
 
@@ -532,7 +526,7 @@ var veryFirstState = {
 var App = React.createClass({
   getInitialState: function() {
     var map = M.vector(M.vector());
-    var fireBaseBaseUrl = 'https://blistering-heat-9706.firebaseio.com/';
+    var fireBaseBaseUrl = '';
 
     return {
       // to sync. the real initialization is in didMount
