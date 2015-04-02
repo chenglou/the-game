@@ -505,6 +505,15 @@ function upgradeVillage(map, [i, j]) {
 }
 
 function upgradeVillager(map, [vi, vj], [si, sj]) {
+  let villageRank = M.getIn(map, [vi, vj, 'units', 'Village', 'rank']);
+  let villageName = rankers.villageByRank[villageRank];
+  let nextUnitRank = M.getIn(map, [si, sj, 'units', 'Villager', 'rank']) + 1;
+  let nextUnitName = rankers.villagerByRank[nextUnitRank];
+
+  if (!rankers.villageCanProduce[villageName][nextUnitName]) {
+    return map;
+  }
+
   map = M.updateIn(map, [vi, vj, 'units', 'Village', 'gold'], add(-10));
   return M.updateIn(map, [si, sj, 'units', 'Villager', 'rank'], add(1));
 }
