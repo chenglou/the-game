@@ -10,7 +10,7 @@ function findNeighbors(map, i, j) {
   var bottomLeft = [i + 1, oddI ? j : j - 1];
   var bottomRight = [i + 1, oddI ? j + 1 : j];
 
-  return [topLeft, topRight, left, right, bottomLeft, bottomRight].filter((coords) => {
+  return [topLeft, topRight, left, right, bottomLeft, bottomRight].filter(coords => {
     return M.getIn(map, coords);
   });
 }

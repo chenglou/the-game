@@ -25,23 +25,6 @@ var nameInDisplayOrder = {
   Villager: 7,
 };
 
-var rank = {
-  // hovel: overtaken by enemy soldier
-  // town: overtaken by enemy soldier
-  // fort: overtaken by knight
-  Hovel: 2,
-  Town: 3,
-  Fort: 4,
-  Castle: 99,
-
-  Peasant: 1,
-  Infantry: 2,
-  Soldier: 4, // not a typo
-  Knight: 5,
-
-  Watchtower: 2,
-};
-
 var defaultConfig = {
   Grass: {},
   Sea: {},
@@ -54,4 +37,4 @@ var defaultConfig = {
   Watchtower: {},
 };
 
-module.exports = {nameInDisplayOrder, comp, rank, defaultConfig};
+module.exports = {nameInDisplayOrder, comp, defaultConfig};
