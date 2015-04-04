@@ -8,7 +8,7 @@ var dissocIn = require('./src/utils/dissocIn');
 var randNth = require('./src/utils/randNth');
 var add = require('./src/utils/add');
 var findNeighbors = require('./src/findNeighbors');
-var getConflicts = require('./src/getConflicts');
+var hasConflict = require('./src/hasConflict');
 var positioner = require('./src/map/positioner');
 var {defaultConfig} = require('./src/everyUnit');
 var rankers = require('./src/rankers');
@@ -17,6 +17,16 @@ var Firebase = require('firebase');
 var UnitSelector = require('./src/debug/UnitSelector');
 var surroundWithSea = require('./src/debug/surroundWithSea');
 var forceAddNewUnit = require('./src/debug/forceAddNewUnit');
+var getColor = require('./src/getColor');
+var findVillageInRegion = require('./src/findVillageInRegion');
+var findRegion = require('./src/findRegion');
+var movePeasant = require('./src/movePeasant');
+var moveInfantry = require('./src/moveInfantry');
+var moveSoldier = require('./src/moveSoldier');
+var moveKnight = require('./src/moveKnight');
+var trampleOnMeadow = require('./src/trampleOnMeadow');
+var canMoveToAura = require('./src/canMoveToAura');
+var updateMap = require('./src/updateMap');
 
 var map1 = require('./src/map/data/map1');
 
@@ -33,32 +43,11 @@ function getUnitsByName(map, unitName) {
   }, map, M.range());
 }
 
-// helper
-function getColor(map, i, j) {
-  return M.getIn(map, [i, j, 'color']);
-}
-
 function getUnitsByColorAndName(map, turn, unitName) {
   return M.filter(
     ([i, j]) => M.getIn(map, [i, j, 'color']) === turn,
     getUnitsByName(map, unitName)
   );
-}
-
-function updateMap(map, coordsList, f) {
-  return M.reduce(
-    (map, coords) => M.updateIn(map, coords, f),
-    map,
-    coordsList
-  );
-}
-
-function findVillageInRegion(map, region) {
-  return region.filter(([i, j]) => getVillage(map, i, j))[0];
-}
-
-function hasConflict(map, unitName, i, j) {
-  return !M.isEmpty(getConflicts(map, unitName, i, j));
 }
 
 function coordsInRegion(map, [i, j], [ti, tj]) {
@@ -155,27 +144,6 @@ function matureBuilt(map, turn, unitName) {
       });
     }
   );
-}
-
-function findRegion(map, i, j) {
-  var color = getColor(map, i, j);
-
-  var visited = M.set();
-  var toVisit = [[i, j]];
-
-  while (toVisit.length > 0) {
-    let [i, j] = toVisit.pop();
-    var unVisitedSameColorNeighbors = findNeighbors(map, i, j)
-      .filter(([i, j]) => getColor(map, i, j) === color)
-      .filter(([i, j]) => !M.get(visited, M.vector(i, j)));
-
-    unVisitedSameColorNeighbors.forEach(([i, j]) => {
-      visited = M.conj(visited, M.vector(i, j));
-      toVisit.push([i, j]);
-    });
-  }
-
-  return js(visited);
 }
 
 function addIncome(map, turn) {
@@ -300,28 +268,15 @@ function getMenuItemsForVillager(unitName, {hasMoved, cooldown}, gold, wood, cb)
 
 // ---------------- state returners
 
-function maybeTrampleOnMeadow(map, unitName, [i, j]) {
-  var hasMeadow = M.getIn(map, [i, j, 'units', 'Meadow']);
-  var hasRoadWith0Cooldown =
-    M.getIn(map, [i, j, 'units', 'Road', 'cooldown']) === 0;
-
-  // trample like an asshole
-  if ((unitName === 'Knight' || unitName === 'Soldier') &&
-      hasMeadow &&
-      !hasRoadWith0Cooldown) {
-    map = dissocIn(map, [i, j, 'units', 'Meadow']);
-  }
-
-  return map;
-}
-
 function newVillager(map, [di, dj], [vi, vj], unitName, gold) {
   if (!coordsInRegion(map, [vi, vj], [di, dj]) ||
       hasConflict(map, 'Villager', di, dj)) {
     return map;
   }
 
-  map = maybeTrampleOnMeadow(map, unitName, [di, dj]);
+  if (unitName === 'Knight' || unitName === 'Soldier') {
+    map = trampleOnMeadow(map, unitName, [di, dj]);
+  }
 
   map = M.updateIn(map, [vi, vj, 'units', 'Village', 'gold'], add(-gold));
   var rank = rankers.villagerByRank.indexOf(unitName);
@@ -387,117 +342,25 @@ function build(map, [i, j], unitName, unitCooldown) {
   return M.assocIn(map, [i, j, 'units', 'Villager', 'cooldown'], unitCooldown);
 }
 
-function move(map, [di, dj], [ui, uj]) {
-  let villagerRank = M.getIn(map, [ui, uj, 'units', 'Villager', 'rank']);
-  let unitName = rankers.villagerByRank[villagerRank];
-
-  var destConfig = M.getIn(map, [di, dj]);
+function move(map, unitName, [di, dj], [ui, uj]) {
   var destColor = getColor(map, di, dj);
   var ownColor = getColor(map, ui, uj);
 
-  var isEnemyColor = destColor !== 'Gray' && destColor !== ownColor;
-
-  // peasant can't go on neighbor enemy tiles
-  if (unitName === 'Peasant' && isEnemyColor) {
+  // if enemy tile, check aura, might have many auras
+  if (destColor !== ownColor &&
+      destColor !== 'Gray' &&
+      !canMoveToAura(map, unitName, destColor, [di, dj])) {
     return map;
   }
 
-  var hasTree = M.getIn(destConfig, ['units', 'Tree']);
-  var hasTombstone = M.getIn(destConfig, ['units', 'Tombstone']);
-
-  // only knight can't gather wood & clear tombstone
-  if (unitName === 'Knight' && (hasTree || hasTombstone)) {
-    return map;
-  }
-
-  var movingToNeighbor = findNeighbors(map, ui, uj).some(([i, j]) => {
-    return i === di && j === dj;
-  });
-  if (!movingToNeighbor) {
-    return map;
-  }
-
-  map = dissocIn(map, [di, dj, 'units', 'Tombstone']);
-
-  if (hasTree) {
-    map = dissocIn(map, [di, dj, 'units', 'Tree']);
-
-    let [vi, vj] = findVillageInRegion(map, findRegion(map, ui, uj));
-    map = M.updateIn(map, [vi, vj, 'units', 'Village', 'wood'], add(1));
-  }
-
-  // check if unit can coexist on dest tile. this must be done after removing
-  // tombstone and tree
-  if (hasConflict(map, 'Villager', di, dj)) {
-    return map;
-  }
-
-  // at this point we don't have any more early return (aka invalid move). we
-  // can safely mark unit as having already moved below
-
-  // can't move anymore if picked tomb/tree/differently colored tile
-  if (hasTree || hasTombstone || destColor !== ownColor) {
-    map = M.assocIn(map, [ui, uj, 'units', 'Villager', 'hasMoved'], true);
-  }
-
-  map = maybeTrampleOnMeadow(map, unitName, [di, dj]);
-
-  // might be joining 2/3 same-colored regions...
-  if (destColor !== ownColor) {
-    var regions = findNeighbors(map, di, dj)
-      .filter(([i, j]) => getColor(map, i, j) === ownColor)
-      .map(([i, j]) => findRegion(map, i, j));
-
-    // will kill dupe villages
-    var villageToRegionSize = M.zipmap(
-      clj(regions.map(region => findVillageInRegion(map, region))),
-      regions.map(region => region.length)
-    );
-
-    var bestVillagePack = M.reduce((pack1, pack2) => {
-      // highest ranked village
-      var [[i1, j1], size1] = js(pack1);
-      var [[i2, j2], size2] = js(pack2);
-      var rank1 = M.getIn(map, [i1, j1, 'units', 'Village', 'rank']);
-      var rank2 = M.getIn(map, [i2, j2, 'units', 'Village', 'rank']);
-
-      if (rank1 > rank2) {
-        return pack1;
-      } else if (rank1 < rank2) {
-        return pack2;
-      }
-      // if same rank: biggest region village
-      return size1 > size2 ? pack1 : pack2;
-    }, villageToRegionSize);
-
-    var [[bi, bj], size] = js(bestVillagePack);
-
-    map = M.reduce((map, pack) => {
-      var [[i, j], size] = js(pack);
-      if (i === bi && j === bj) {
-        return map;
-      }
-
-      var gold = M.getIn(map, [i, j, 'units', 'Village', 'gold']);
-      var wood = M.getIn(map, [i, j, 'units', 'Village', 'wood']);
-
-      map = M.updateIn(map, [bi, bj, 'units', 'Village', 'gold'], add(gold));
-      map = M.updateIn(map, [bi, bj, 'units', 'Village', 'wood'], add(wood));
-      return dissocIn(map, [i, j, 'units', 'Village']);
-    }, map, villageToRegionSize);
-
-    // claim land, mark color
-    map = M.assocIn(map, [di, dj, 'color'], ownColor);
-  }
-
-  // finally move. nice to do at the end, otherwise [ui ji] [di dj] gets
-  // confusing halfway through
-  // can't reuse type from above. we changed the map and unit afterward (e.g.
-  // hasMoved)
-  var unit = getVillager(map, ui, uj);
-  map = dissocIn(map, [ui, uj, 'units', 'Villager']);
-  return M.assocIn(map, [di, dj, 'units', 'Villager'], unit);
+  return {
+    Peasant: movePeasant,
+    Infantry: moveInfantry,
+    Soldier: moveSoldier,
+    Knight: moveKnight,
+  }[unitName](map, [di, dj], [ui, uj]);
 }
+
 
 function upgradeVillage(map, [i, j]) {
   map = M.updateIn(map, [i, j, 'units', 'Village', 'wood'], add(-8));
@@ -834,8 +697,14 @@ var App = React.createClass({
       newMap = newVillager(map, [i, j], selectedCoords, 'Soldier', 30);
     } else if (pendingAction === 'newKnight') {
       newMap = newVillager(map, [i, j], selectedCoords, 'Knight', 40);
-    } else if (pendingAction === 'move') {
-      newMap = move(map, [i, j], selectedCoords);
+    } else if (pendingAction === 'movePeasant') {
+      newMap = move(map, 'Peasant', [i, j], selectedCoords);
+    } else if (pendingAction === 'moveInfantry') {
+      newMap = move(map, 'Infantry', [i, j], selectedCoords);
+    } else if (pendingAction === 'moveSoldier') {
+      newMap = move(map, 'Soldier', [i, j], selectedCoords);
+    } else if (pendingAction === 'moveKnight') {
+      newMap = move(map, 'Knight', [i, j], selectedCoords);
     } else if (pendingAction === 'newWatchtower') {
       newMap = newWatchtower(map, [i, j], selectedCoords);
     } else if (pendingAction === 'combineVillagers') {

@@ -25,28 +25,28 @@ var pendingActions = {
   Villager: {
     Peasant: [
       // can't invade
-      ['Move', 'move', 0, 0],
+      ['Move', 'movePeasant', 0, 0],
       ['Cultivate Meadow', 'cultivateMeadow', 0, 0],
       ['Build Road', 'buildRoad', 0, 0],
       ['Upgrade to Infantry', 'upgradeVillager', 10, 0],
       ['Combine', 'combineVillagers', 0, 0]
     ],
     Infantry: [
-      ['Move', 'move', 0, 0],
+      ['Move', 'moveInfantry', 0, 0],
       ['Upgrade to Soldier', 'upgradeVillager', 10, 0],
       // ['Kill', 'kill'],
       ['Combine', 'combineVillagers', 0, 0]
     ],
     Soldier: [
       // tramples meadow unless there's a road
-      ['Move', 'move', 0, 0],
+      ['Move', 'moveSoldier', 0, 0],
       ['Upgrade to Knight', 'upgradeVillager', 10, 0],
       // ['Kill', 'kill'],
       ['Combine', 'combineVillagers', 0, 0]
     ],
     Knight: [
       // can't move into tree, etc. tramples meadow unless road
-      ['Move', 'move', 0, 0],
+      ['Move', 'moveKnight', 0, 0],
       // ['Kill', 'kill'],
     ],
   }
