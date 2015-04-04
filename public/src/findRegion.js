@@ -12,6 +12,7 @@ function findRegion(map, i, j) {
 
   while (toVisit.length > 0) {
     let [i, j] = toVisit.pop();
+    visited = M.conj(visited, M.vector(i, j));
     var unVisitedSameColorNeighbors = findNeighbors(map, i, j)
       .filter(([i, j]) => getColor(map, i, j) === color)
       .filter(([i, j]) => !M.get(visited, M.vector(i, j)));
