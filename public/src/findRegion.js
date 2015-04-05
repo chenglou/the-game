@@ -1,11 +1,10 @@
 'use strict';
 
 var M = require('mori');
-var getColor = require('./getColor');
 var findNeighbors = require('./findNeighbors');
 
-function findRegion(map, i, j) {
-  var color = getColor(map, i, j);
+function findRegionSet(map, i, j) {
+  var color = M.getIn(map, [i, j, 'color']);
 
   var visited = M.set();
   var toVisit = [[i, j]];
@@ -14,7 +13,7 @@ function findRegion(map, i, j) {
     let [i, j] = toVisit.pop();
     visited = M.conj(visited, M.vector(i, j));
     var unVisitedSameColorNeighbors = findNeighbors(map, i, j)
-      .filter(([i, j]) => getColor(map, i, j) === color)
+      .filter(([i, j]) => M.getIn(map, [i, j, 'color']) === color)
       .filter(([i, j]) => !M.get(visited, M.vector(i, j)));
 
     unVisitedSameColorNeighbors.forEach(([i, j]) => {
@@ -23,7 +22,15 @@ function findRegion(map, i, j) {
     });
   }
 
-  return M.toJs(visited);
+  return visited;
 }
 
-module.exports = findRegion;
+function findRegion(map, i, j) {
+  return M.toJs(findRegionSet(map, i, j));
+}
+
+function findRegionM(map, i, j) {
+  return M.into(M.vector(), findRegionSet(map, i, j));
+}
+
+module.exports = {findRegion, findRegionM};
