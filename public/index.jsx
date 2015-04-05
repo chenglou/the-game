@@ -27,7 +27,7 @@ var moveKnight = require('./src/moveKnight');
 var trampleOnMeadow = require('./src/trampleOnMeadow');
 var canMoveToAura = require('./src/canMoveToAura');
 var updateMap = require('./src/updateMap');
-
+var findPath = require('./src/pathFinding');
 var map1 = require('./src/map/data/map1');
 
 var js = M.toJs;
