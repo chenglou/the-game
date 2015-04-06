@@ -3,7 +3,13 @@
 var M = require('mori');
 
 function findVillageInRegion(map, region) {
-  return region.filter(([i, j]) => M.getIn(map, [i, j, 'units', 'Village']))[0];
+  let coords = M.filter(coords => {
+    let i = M.first(coords);
+    let j = M.second(coords);
+    return M.getIn(map, [i, j, 'units', 'Village']);
+  }, region);
+
+  return M.toJs(M.first(coords));
 }
 
 module.exports = findVillageInRegion;
