@@ -79,36 +79,6 @@ function findPath(map, start, end)
   return path;
 }
 
-function findNeighbours(i, j, maxi, maxj)
-{
-  var neighbours = [];
-
-  if (j > 0)
-    neighbours.push([i, j-1])
-  if (j < maxj)
-    neighbours.push([i, j+1])
-  if (i > 0)
-    neighbours.push([i-1, j])
-  if (i < maxi)
-    neighbours.push([i+1, j])
-
-  if (i > 0 && i < maxi)
-  {
-    if (i % 2 === 0 && j > 0)
-    {
-      neighbours.append([i-1, j-1])
-      neighbours.append([i+1, j-1])
-    }
-    if (i % 2 === 1 && j < maxj)
-    {
-      neighbours.append([i-1, j+1])
-      neighbours.append([i+1, j+1])
-    }
-  }
-  
-  return neighbours;
-}
-
 function setupHeuristic(map, start, end)
 {
   // initialize a 2D array of -1 
@@ -151,7 +121,7 @@ function findNeighbours(map, i, j)
   return [topLeft, topRight, left, right, bottomLeft, bottomRight]
     .filter(([i ,j]) => i >=0 && i < map.length && j >= 0 && j < map[i].length);
 }
-//console.log(findPath([[0, 1, 0, 0],[0, 0, 0, 0],[0, 1, 0, 0]], [0, 0], [2, 3]));
+console.log(findPath([[0, 1, 0, 0],[0, 0, 0, 0],[0, 1, 0, 0]], [0, 0], [2, 3]));
 module.exports = findPath;
 
 
