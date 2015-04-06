@@ -31,8 +31,6 @@ function findPath(map, start, end)
     // remove lowest rank from open
     var cur = M.first(open);
     open = M.rest(open);
-    console.log(M.toJs(cur));
-    console.log(M.toJs(open));
 
     var ci = M.nth(cur, 0);
     var cj = M.nth(cur, 1);
@@ -45,24 +43,19 @@ function findPath(map, start, end)
 
     var curNeighbors = findNeighbours(map, ci, cj)
       .filter(([i, j]) => H[i][j] !== -1);
-    console.log(curNeighbors);
 
     // set up cost
     curNeighbors.forEach(([i, j]) => {
       var cost = C[ci][cj] + 1; 
       if (M.get(open, M.vector(i, j)) && cost < C[i][j])
-      {
         open = M.disj(open, M.vector(i, j));
-      }
       if (M.get(closed, M.vector(i, j)) && cost < C[i][j])
-      {
         closed = M.disj(closed, M.vector(i, j));
-      }
       if (!M.get(open, M.vector(i, j)) && !M.get(closed, M.vector(i, j)))
       {
         C[i][j] = cost;
         open = M.conj(open, M.vector(i, j));
-        console.log(M.toJs(open));
+        
         // TODO: set parent edge
         parentEdges[i][j][0] = ci;
         parentEdges[i][j][1] = cj;
@@ -75,11 +68,13 @@ function findPath(map, start, end)
 
   var curNode = end;
   var path = [];
+  
   while (!(curNode[0] === start[0] && curNode[1] === start[1]))
   {
     path.unshift([curNode[0], curNode[1]]);
     curNode = parentEdges[curNode[0]][curNode[1]];
   }
+  // adding start point to the front of the path
   path.unshift(start);
   return path;
 }
@@ -142,7 +137,8 @@ function setupHeuristic(map, start, end)
   return heuristic;
 }
 
-function findNeighbours(map, i, j) {
+function findNeighbours(map, i, j) 
+{
   var oddI = i % 2 === 1;
 
   var topLeft = [i - 1, oddI ? j : j - 1];
@@ -155,9 +151,7 @@ function findNeighbours(map, i, j) {
   return [topLeft, topRight, left, right, bottomLeft, bottomRight]
     .filter(([i ,j]) => i >=0 && i < map.length && j >= 0 && j < map[i].length);
 }
-
-
-console.log(findPath([[0, 1, 0, 0],[1, 0, 0, 0],[0, 1, 0, 0]], [0, 0], [2, 3]));
+//console.log(findPath([[0, 1, 0, 0],[0, 0, 0, 0],[0, 1, 0, 0]], [0, 0], [2, 3]));
 module.exports = findPath;
 
 
