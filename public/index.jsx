@@ -19,7 +19,7 @@ var surroundWithSea = require('./src/debug/surroundWithSea');
 var forceAddNewUnit = require('./src/debug/forceAddNewUnit');
 var getColor = require('./src/getColor');
 var findVillageInRegion = require('./src/findVillageInRegion');
-var findRegion = require('./src/findRegion');
+var {findRegion} = require('./src/findRegion');
 var movePeasant = require('./src/movePeasant');
 var moveInfantry = require('./src/moveInfantry');
 var moveSoldier = require('./src/moveSoldier');
@@ -265,6 +265,34 @@ function getMenuItemsForVillager(unitName, {hasMoved, cooldown}, gold, wood, cb)
     );
   });
 }
+
+function getMenuItemsForCannon({hasMoved}, gold, wood, cb) {
+  if (hasMoved) {
+    return [
+      <MenuItem key="hasMoved" disabled={true}>
+        Already Moved
+      </MenuItem>
+    ];
+  }
+
+  return pendingActions.Cannon.map(([desc, action, goldReq, woodReq]) => {
+    if (gold >= goldReq && wood >= woodReq) {
+      return (
+        <MenuItem key={action} onClick={cb.bind(null, action)}>
+          {desc}
+        </MenuItem>
+      );
+    }
+
+    return (
+      <MenuItem key={action} disabled={true}>
+        {desc}
+      </MenuItem>
+    );
+  });
+}
+
+
 
 // ---------------- state returners
 
@@ -671,12 +699,18 @@ var App = React.createClass({
       return;
     }
 
-    if (phase !== 'Player' ||
-      (!pendingAction && getColor(map, i, j) !== turns[currTurn]) ||
-      currTurn !== selfTurn) {
+    // TODO: test. remove this and uncomment next code block
+    if (phase !== 'Player') {
       this.setState(cancelPendingActionState);
       return;
     }
+
+    // if (phase !== 'Player' ||
+    //   (!pendingAction && getColor(map, i, j) !== turns[currTurn]) ||
+    //   (currTurn !== selfTurn) {
+    //   this.setState(cancelPendingActionState);
+    //   return;
+    // }
 
     if (!pendingAction) {
       this.setState({
@@ -800,6 +834,7 @@ var App = React.createClass({
       let [i, j] = selectedCoords;
       let villager = getVillager(map, i, j);
       let village = getVillage(map, i, j);
+      let cannon = M.getIn(map, [i, j, 'units', 'Cannon']);
 
       let x = positioner.calcLeft(j, i);
       let y = positioner.calcTop(i);
@@ -822,6 +857,17 @@ var App = React.createClass({
           <Menu pos={[x, y]}>
             {getMenuItemsForVillage(
               rankers.villageByRank[M.get(village, 'rank')],
+              M.get(village, 'gold'),
+              M.get(village, 'wood'),
+              this.handleMenuItemClick
+            )}
+          </Menu>
+        );
+      } else if (cannon) {
+        maybeMenu = (
+          <Menu pos={[x, y]}>
+            {getMenuItemsForCannon(
+              js(cannon),
               M.get(village, 'gold'),
               M.get(village, 'wood'),
               this.handleMenuItemClick
