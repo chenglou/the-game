@@ -5,13 +5,17 @@ var arrToSet = require('./utils/arrToSet');
 var coexistances = {
   Village: ['Grass', 'Watchtower'],
   Villager: ['Grass', 'Meadow', 'Road'],
-  Grass: ['Village', 'Tree', 'Meadow', 'Watchtower', 'Road', 'Tombstone', 'Villager'],
-  Meadow: ['Grass', 'Watchtower', 'Tombstone', 'Road', 'Villager'],
-  Road: ['Grass', 'Watchtower', 'Tombstone', 'Meadow', 'Villager'],
+  Grass: [
+    'Village', 'Tree', 'Meadow', 'Watchtower', 'Road', 'Tombstone', 'Villager',
+    'Cannon',
+  ],
+  Meadow: ['Grass', 'Watchtower', 'Tombstone', 'Road', 'Villager', 'Cannon'],
+  Road: ['Grass', 'Watchtower', 'Tombstone', 'Meadow', 'Villager', 'Cannon'],
   Sea: [],
   Tombstone: ['Grass', 'Meadow', 'Road'],
   Tree: ['Grass'],
   Watchtower: ['Village', 'Grass', 'Meadow', 'Road'],
+  Cannon: ['Grass', 'Meadow', 'Road'],
 };
 
 for (var key in coexistances) {

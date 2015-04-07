@@ -14,6 +14,7 @@ var assetDims = {
   Town: [66, 68],
   Tree: [30, 79],
   Watchtower: [32, 66],
+  Cannon: [65, 91],
 
   overlay: [69, 72],
   menuItem: [190, 45],

@@ -8,6 +8,7 @@ var comp = {
   Tombstone: require('./units/Tombstone'),
   Tree: require('./units/Tree'),
   Watchtower: require('./units/Watchtower'),
+  Cannon: require('./units/Cannon'),
 };
 
 var nameInDisplayOrder = {
@@ -23,8 +24,10 @@ var nameInDisplayOrder = {
   Tombstone: 5,
   Watchtower: 6,
   Villager: 7,
+  Cannon: 7,
 };
 
+// TODO: convert to mori
 var defaultConfig = {
   Grass: {},
   Sea: {},
@@ -35,6 +38,7 @@ var defaultConfig = {
   Tree: {},
   Tombstone: {},
   Watchtower: {},
+  Cannon: {hasMoved: false},
 };
 
 module.exports = {nameInDisplayOrder, comp, defaultConfig};

@@ -49,7 +49,12 @@ var pendingActions = {
       ['Move', 'moveKnight', 0, 0],
       // ['Kill', 'kill'],
     ],
-  }
+  },
+
+  Cannon: [
+    ['Move', 'moveCannon', 0, 0],
+    ['Shoot', 'shootCannon', 0, 1],
+  ],
 };
 
 var immediateActions = {
