@@ -5,7 +5,7 @@ var {MenuItem} = require('./Menu');
 var {pendingActions} = require('./actions');
 
 function getItems(currGold, currWood, cb) {
-  return function ([desc, action, {gold, wood, ...rest}]) {
+  return function([desc, action, {gold, wood, ...rest}]) {
     if ((gold == null && wood == null) || currGold >= gold && currWood >= wood) {
       return (
         <MenuItem key={desc} onClick={cb.bind(null, [action, {gold, wood, ...rest}])}>

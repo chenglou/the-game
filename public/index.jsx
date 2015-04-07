@@ -328,12 +328,10 @@ function checkNeighborsAura(map, [di, dj], [ui, uj], unitName) {
   return map;
 }
 
-function checkConflictVillager(map, [di, dj]) {
-  return hasConflict(map, 'Villager', di, dj) ? null : map;
-}
-
-function checkConflictCannon(map, [di, dj]) {
-  return hasConflict(map, 'Cannon', di, dj) ? null : map;
+function checkConflict(name) {
+  return function(map, [di, dj]) {
+    return hasConflict(map, name, di, dj) ? null : map;
+  };
 }
 
 function stopVillagerUnderConditions(map, [di, dj], [ui, uj]) {
@@ -461,18 +459,12 @@ function joinLands(map, [di, dj], [ui, uj]) {
   return map;
 }
 
-function _moveUnit(map, [di, dj], [ui, uj], unitName) {
-  var unit = getIn(map, [ui, uj, 'units', unitName]);
-  map = dissocIn(map, [ui, uj, 'units', unitName]);
-  return assocIn(map, [di, dj, 'units', unitName], unit);
-}
-
-function moveVillager(map, [di, dj], [ui, uj]) {
-  return _moveUnit(map, [di, dj], [ui, uj], 'Villager');
-}
-
-function moveCannon(map, [di, dj], [ui, uj]) {
-  return _moveUnit(map, [di, dj], [ui, uj], 'Cannon');
+function moveUnit(name) {
+  return function(map, [di, dj], [ui, uj]) {
+    let unit = getIn(map, [ui, uj, 'units', name]);
+    map = dissocIn(map, [ui, uj, 'units', name]);
+    return assocIn(map, [di, dj, 'units', name], unit);
+  };
 }
 
 function clearDeadRegions(map) {
@@ -543,9 +535,9 @@ function move(map, [di, dj], [ui, uj], {name}) {
       checkCantInvade,
       stopVillagerUnderConditions,
       cleanTreeAndTombstone,
-      checkConflictVillager,
+      checkConflict('Villager'),
       joinLands,
-      moveVillager,
+      moveUnit('Villager'),
     ],
     Infantry: [
       checkMovingToNeighbors,
@@ -553,9 +545,9 @@ function move(map, [di, dj], [ui, uj], {name}) {
       stopVillagerUnderConditions,
       cleanTreeAndTombstone,
       kill,
-      checkConflictVillager,
+      checkConflict('Villager'),
       joinLands,
-      moveVillager,
+      moveUnit('Villager'),
       clearDeadRegions,
       killGrayMeadowCooldowns,
       killGrayUnits,
@@ -567,9 +559,9 @@ function move(map, [di, dj], [ui, uj], {name}) {
       cleanTreeAndTombstone,
       trampleOnMeadow,
       kill,
-      checkConflictVillager,
+      checkConflict('Villager'),
       joinLands,
-      moveVillager,
+      moveUnit('Villager'),
       clearDeadRegions,
       killGrayMeadowCooldowns,
       killGrayUnits,
@@ -581,9 +573,9 @@ function move(map, [di, dj], [ui, uj], {name}) {
       stopVillagerUnderConditions,
       trampleOnMeadow,
       kill,
-      checkConflictVillager,
+      checkConflict('Villager'),
       joinLands,
-      moveVillager,
+      moveUnit('Villager'),
       clearDeadRegions,
       killGrayMeadowCooldowns,
       killGrayUnits,
@@ -594,9 +586,9 @@ function move(map, [di, dj], [ui, uj], {name}) {
       cantTreeAndTombstone,
       stopCannon,
       trampleOnMeadow,
-      checkConflictCannon,
+      checkConflict('Cannon'),
       joinLands,
-      moveCannon,
+      moveUnit('Cannon'),
     ],
   };
 
