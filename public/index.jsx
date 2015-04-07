@@ -138,14 +138,16 @@ function addIncome(map, turn) {
 function payTime(map, turn) {
   return M.reduce((map, [i, j]) => {
     var sum = findRegion(map, i, j).reduce((sum, [i, j]) => {
-      let rank = getIn(map, [i, j, 'units', 'Villager', 'rank']);
-      if (rank == null) {
-        return sum;
-      }
+      return sum + M.reduce((sum, a) => {
+        let name = M.first(a);
+        let config = M.second(a);
 
-      let villagerName = rankers.villagerByRank[rank];
+        let unitName = name === 'Village' ? rankers.villageByRank[get(config, 'rank')]
+          : name === 'Villager' ? rankers.villagerByRank[get(config, 'rank')]
+          : name;
 
-      return sum + rankers.upkeep[villagerName];
+        return sum + (rankers.upkeep[unitName] || 0);
+      }, 0, getIn(map, [i, j, 'units']));
     }, 0);
 
     return updateIn(map, [i, j, 'units', 'Village', 'gold'], add(-sum));
