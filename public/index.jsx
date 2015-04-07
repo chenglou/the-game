@@ -17,7 +17,6 @@ var Firebase = require('firebase');
 var UnitSelector = require('./src/debug/UnitSelector');
 var surroundWithSea = require('./src/debug/surroundWithSea');
 var forceAddNewUnit = require('./src/debug/forceAddNewUnit');
-var getColor = require('./src/getColor');
 var findVillageInRegion = require('./src/findVillageInRegion');
 var {findRegion, findRegionM} = require('./src/findRegion');
 var trampleOnMeadow = require('./src/trampleOnMeadow');
@@ -25,13 +24,14 @@ var canMoveToAura = require('./src/canMoveToAura');
 var updateMap = require('./src/updateMap');
 var map1 = require('./src/map/data/map1');
 
-var js = M.toJs;
-var clj = M.toClj;
+let js = M.toJs;
+let clj = M.toClj;
+let {getIn, get, assoc, assocIn, updateIn} = M;
 
 function getUnitsByName(map, unitName) {
   return M.mapcat((row, i) => {
     var maybeCoords = M.map((cell, j) => {
-      return M.getIn(map, [i, j, 'units', unitName]) ? [i, j] : null;
+      return getIn(map, [i, j, 'units', unitName]) ? [i, j] : null;
     }, row, M.range());
 
     return M.filter(M.identity, maybeCoords);
@@ -40,7 +40,7 @@ function getUnitsByName(map, unitName) {
 
 function getUnitsByColorAndName(map, turn, unitName) {
   return M.filter(
-    ([i, j]) => M.getIn(map, [i, j, 'color']) === turn,
+    ([i, j]) => getIn(map, [i, j, 'color']) === turn,
     getUnitsByName(map, unitName)
   );
 }
@@ -48,21 +48,6 @@ function getUnitsByColorAndName(map, turn, unitName) {
 function coordsInRegion(map, [i, j], [ti, tj]) {
   // ti, tj is the test coords. i, j actually in region
   return findRegion(map, i, j).some(([i2, j2]) => ti === i2 && tj === j2);
-}
-
-// these two functions are, like, syntax magic
-function ve(i, j) {
-  return [i, j, 'units', 'Village'];
-}
-function vr(i, j) {
-  return [i, j, 'units', 'Villager'];
-}
-function getVillage(map, i, j) {
-  return M.getIn(map, ve(i, j));
-}
-
-function getVillager(map, i, j) {
-  return M.getIn(map, vr(i, j));
 }
 
 // ----------- phases
@@ -82,7 +67,7 @@ function growTrees(map) {
     }
 
     var [i2, j2] = randNth(emptyNeighbors);
-    return M.assocIn(map, [i2, j2, 'units', 'Tree'], clj(defaultConfig.Tree));
+    return assocIn(map, [i2, j2, 'units', 'Tree'], clj(defaultConfig.Tree));
   }, map, treeCoords);
 }
 
@@ -94,12 +79,12 @@ function killTombstones(map, turn) {
       cell = dissocIn(cell, ['units', 'Tombstone']);
       // become a tree usually. if it's on a road/meadow, then just make it
       // disappear (tree can't be on road/meadow)
-      var hasMeadow = M.getIn(cell, ['units', 'Meadow']);
-      var hasRoad = M.getIn(cell, ['units', 'Road']);
+      var hasMeadow = getIn(cell, ['units', 'Meadow']);
+      var hasRoad = getIn(cell, ['units', 'Road']);
 
       return hasMeadow || hasRoad
         ? cell
-        : M.assocIn(cell, ['units', 'Tree'], clj(defaultConfig.Tree));
+        : assocIn(cell, ['units', 'Tree'], clj(defaultConfig.Tree));
     }
   );
 }
@@ -108,7 +93,7 @@ function resetUnitMoves(map, turn) {
   return updateMap(
     map,
     getUnitsByColorAndName(map, turn, 'Villager'),
-    cell => M.assocIn(cell, ['units', 'Villager', 'hasMoved'], false)
+    cell => assocIn(cell, ['units', 'Villager', 'hasMoved'], false)
   );
 }
 
@@ -123,7 +108,7 @@ function matureBuilt(map, turn, unitName) {
     map,
     getUnitsByColorAndName(map, turn, unitName),
     cell => {
-      return M.updateIn(cell, ['units', unitName, 'cooldown'], cooldown => {
+      return updateIn(cell, ['units', unitName, 'cooldown'], cooldown => {
         return cooldown ? cooldown - 1 : 0;
       });
     }
@@ -133,9 +118,9 @@ function matureBuilt(map, turn, unitName) {
 function addIncome(map, turn) {
   return M.reduce((map, [i, j]) => {
     var sum = findRegion(map, i, j).reduce((sum, [i, j]) => {
-      let hasTree = M.getIn(map, [i, j, 'units', 'Tree']);
+      let hasTree = getIn(map, [i, j, 'units', 'Tree']);
       let hasMeadowWith0Cooldown =
-        M.getIn(map, [i, j, 'units', 'Meadow', 'cooldown']) === 0;
+        getIn(map, [i, j, 'units', 'Meadow', 'cooldown']) === 0;
 
       // this is only determined by the land type (sea, grass, meadow, tree)
       // conceptually tree is a landtype
@@ -146,14 +131,14 @@ function addIncome(map, turn) {
       return sum + amount;
     }, 0);
 
-    return M.updateIn(map, [i, j, 'units', 'Village', 'gold'], add(sum));
+    return updateIn(map, [i, j, 'units', 'Village', 'gold'], add(sum));
   }, map, getUnitsByColorAndName(map, turn, 'Village'));
 }
 
 function payTime(map, turn) {
   return M.reduce((map, [i, j]) => {
     var sum = findRegion(map, i, j).reduce((sum, [i, j]) => {
-      let rank = M.getIn(map, [i, j, 'units', 'Villager', 'rank']);
+      let rank = getIn(map, [i, j, 'units', 'Villager', 'rank']);
       if (rank == null) {
         return sum;
       }
@@ -163,7 +148,7 @@ function payTime(map, turn) {
       return sum + rankers.upkeep[villagerName];
     }, 0);
 
-    return M.updateIn(map, [i, j, 'units', 'Village', 'gold'], add(-sum));
+    return updateIn(map, [i, j, 'units', 'Village', 'gold'], add(-sum));
   }, map, getUnitsByColorAndName(map, turn, 'Village'));
 }
 
@@ -171,7 +156,7 @@ function unitToTombstone(cell) {
   cell = dissocIn(cell, ['units', 'Villager']);
   // TODO: does cannon turn to tombstone?
   cell = dissocIn(cell, ['units', 'Cannon']);
-  return M.assocIn(
+  return assocIn(
     cell,
     ['units', 'Tombstone'],
     clj(defaultConfig.Tombstone)
@@ -181,18 +166,18 @@ function unitToTombstone(cell) {
 // TODO: cannon logic added. Check which other phase affects cannon
 function dieTime(map, turn) {
   var poorVillageCoords = M.filter(
-    ([i, j]) => M.getIn(map, [i, j, 'units', 'Village', 'gold']) < 0,
+    ([i, j]) => getIn(map, [i, j, 'units', 'Village', 'gold']) < 0,
     getUnitsByColorAndName(map, turn, 'Village')
   );
 
   return M.reduce((map, [i, j]) => {
     // reset negative gold to 0
-    map = M.assocIn(map, [i, j, 'units', 'Village', 'gold'], 0);
+    map = assocIn(map, [i, j, 'units', 'Village', 'gold'], 0);
 
     // turn units into tombstones
     return findRegion(map, i, j)
-      .filter(([i, j]) => getVillager(map, i, j) || M.getIn(map, [i, j, 'units', 'Cannon']))
-      .reduce((map, [i, j]) => unitToTombstone(M.getIn(map, [i, j])), map);
+      .filter(([i, j]) => getIn(map, [i, j, 'units', 'Villager']) || getIn(map, [i, j, 'units', 'Cannon']))
+      .reduce((map, [i, j]) => unitToTombstone(getIn(map, [i, j])), map);
 
   }, map, poorVillageCoords);
 }
@@ -281,10 +266,6 @@ function getMenuItemsForCannon({hasMoved}, gold, wood, cb) {
   });
 }
 
-
-
-// ---------------- state returners
-
 function newVillager(map, [di, dj], [vi, vj], unitName, gold) {
   if (!coordsInRegion(map, [vi, vj], [di, dj]) ||
       hasConflict(map, 'Villager', di, dj)) {
@@ -295,13 +276,13 @@ function newVillager(map, [di, dj], [vi, vj], unitName, gold) {
     map = trampleOnMeadow(map, unitName, [di, dj]);
   }
 
-  map = M.updateIn(map, [vi, vj, 'units', 'Village', 'gold'], add(-gold));
+  map = updateIn(map, [vi, vj, 'units', 'Village', 'gold'], add(-gold));
   var rank = rankers.villagerByRank.indexOf(unitName);
 
-  return M.assocIn(
+  return assocIn(
     map,
     [di, dj, 'units', 'Villager'],
-    M.assoc(clj(defaultConfig.Villager), 'rank', rank)
+    assoc(clj(defaultConfig.Villager), 'rank', rank)
   );
 }
 
@@ -311,9 +292,9 @@ function newWatchtower(map, [di, dj], [vi, vj]) {
     return map;
   }
 
-  map = M.updateIn(map, [vi, vj, 'units', 'Village', 'wood'], add(-5));
+  map = updateIn(map, [vi, vj, 'units', 'Village', 'wood'], add(-5));
 
-  return M.assocIn(
+  return assocIn(
     map,
     [di, dj, 'units', 'Watchtower'],
     clj(defaultConfig.Watchtower)
@@ -322,19 +303,19 @@ function newWatchtower(map, [di, dj], [vi, vj]) {
 
 function combineVillagers(map, [di, dj], [ui, uj]) {
   if (!coordsInRegion(map, [ui, uj], [di, dj]) ||
-      !getVillager(map, di, dj)) {
+      !getIn(map, [di, dj, 'units', 'Villager'])) {
     return map;
   }
 
   // 'merge rank': Peasant + Peasant = Infantry => 1 + 1 = 2
-  var v1MergeRank = M.getIn(map, [ui, uj, 'units', 'Villager', 'rank']) + 1;
-  var v2MergeRank = M.getIn(map, [di, dj, 'units', 'Villager', 'rank']) + 1;
+  var v1MergeRank = getIn(map, [ui, uj, 'units', 'Villager', 'rank']) + 1;
+  var v2MergeRank = getIn(map, [di, dj, 'units', 'Villager', 'rank']) + 1;
   var mergedRank = v1MergeRank + v2MergeRank;
   var actualRank = mergedRank - 1;
   var mergedName = rankers.villagerByRank[actualRank];
 
   var [vi, vj] = findVillageInRegion(map, findRegion(map, ui, uj));
-  var villageRank = M.getIn(map, [vi, vj, 'units', 'Village', 'rank']);
+  var villageRank = getIn(map, [vi, vj, 'units', 'Village', 'rank']);
   var villageName = rankers.villageByRank[villageRank];
 
   if (!rankers.villageCanProduce[villageName][mergedName]) {
@@ -343,10 +324,10 @@ function combineVillagers(map, [di, dj], [ui, uj]) {
 
   // merge to the destination coordinates. clears cooldown, hasMoved
   map = dissocIn(map, [ui, uj, 'units', 'Villager']);
-  return M.assocIn(
+  return assocIn(
     map,
     [di, dj, 'units', 'Villager'],
-    M.assoc(clj(defaultConfig.Villager), 'rank', actualRank)
+    assoc(clj(defaultConfig.Villager), 'rank', actualRank)
   );
 }
 
@@ -355,8 +336,8 @@ function build(map, [i, j], unitName, unitCooldown) {
     return map;
   }
 
-  map = M.assocIn(map, [i, j, 'units', unitName], clj(defaultConfig[unitName]));
-  return M.assocIn(map, [i, j, 'units', 'Villager', 'cooldown'], unitCooldown);
+  map = assocIn(map, [i, j, 'units', unitName], clj(defaultConfig[unitName]));
+  return assocIn(map, [i, j, 'units', 'Villager', 'cooldown'], unitCooldown);
 }
 
 // move helpers ===========
@@ -367,14 +348,14 @@ function coordsToRegion(map) {
 
   return M.reduce((thing, coords) => {
     let [i, j] = M.toJs(coords);
-    if (M.get(thing, coords)) {
+    if (get(thing, coords)) {
       return thing;
     }
 
     let region = findRegionM(map, i, j);
 
     return M.reduce((thing, coords) => {
-      return M.assoc(thing, coords, region);
+      return assoc(thing, coords, region);
     }, thing, region);
   }, M.hashMap(), M.mapcat(M.identity, coords));
 }
@@ -390,30 +371,22 @@ function checkMovingToNeighbors(map, [di, dj], [ui, uj]) {
   var movingToNeighbor = findNeighbors(map, ui, uj)
     .some(([i, j]) => i === di && j === dj);
 
-  if (!movingToNeighbor) {
-    return null;
-  }
-
-  return map;
+  return movingToNeighbor ? map : null;
 }
 
 // peasant, cannon
 function checkCantInvade(map, [di, dj], [ui, uj]) {
-  var destColor = getColor(map, di, dj);
-  var ownColor = getColor(map, ui, uj);
-
+  var destColor = getIn(map, [di, dj, 'color']);
+  var ownColor = getIn(map, [ui, uj, 'color']);
   var isEnemyColor = destColor !== 'Gray' && destColor !== ownColor;
-  if (isEnemyColor) {
-    return null;
-  }
 
-  return map;
+  return isEnemyColor ? null : map;
 }
 
 // can't invade protected tiles of higher rank
 function checkNeighborsAura(map, [di, dj], [ui, uj], unitName) {
-  var destColor = getColor(map, di, dj);
-  var ownColor = getColor(map, ui, uj);
+  var destColor = getIn(map, [di, dj, 'color']);
+  var ownColor = getIn(map, [ui, uj, 'color']);
 
   // if enemy tile, check aura, might have many auras
   if (destColor !== ownColor &&
@@ -425,82 +398,66 @@ function checkNeighborsAura(map, [di, dj], [ui, uj], unitName) {
   return map;
 }
 
-function checkConflictVillager(map, [di, dj], [ui, uj]) {
-  if (hasConflict(map, 'Villager', di, dj)) {
-    return null;
-  }
-
-  return map;
+function checkConflictVillager(map, [di, dj]) {
+  return hasConflict(map, 'Villager', di, dj) ? null : map;
 }
 
-function checkConflictCannon(map, [di, dj], [ui, uj]) {
-  if (hasConflict(map, 'Cannon', di, dj)) {
-    return null;
-  }
-
-  return map;
+function checkConflictCannon(map, [di, dj]) {
+  return hasConflict(map, 'Cannon', di, dj) ? null : map;
 }
 
 function stopVillagerUnderConditions(map, [di, dj], [ui, uj]) {
-  let destColor = getColor(map, di, dj);
-  let ownColor = getColor(map, ui, uj);
-
-  let destConfig = M.getIn(map, [di, dj]);
-  let hasTree = M.getIn(destConfig, ['units', 'Tree']);
-  let hasTombstone = M.getIn(destConfig, ['units', 'Tombstone']);
+  let destColor = getIn(map, [di, dj, 'color']);
+  let ownColor = getIn(map, [ui, uj, 'color']);
+  let hasTree = getIn(map, [di, dj, 'units', 'Tree']);
+  let hasTombstone = getIn(map, [di, dj, 'units', 'Tombstone']);
 
   if (hasTree || hasTombstone || destColor !== ownColor) {
-    map = M.assocIn(map, [ui, uj, 'units', 'Villager', 'hasMoved'], true);
+    map = assocIn(map, [ui, uj, 'units', 'Villager', 'hasMoved'], true);
   }
 
   return map;
 }
 
 function cleanTreeAndTombstone(map, [di, dj], [ui, uj]) {
-  var hasTree = M.getIn(map, [di, dj, 'units', 'Tree']);
+  var hasTree = getIn(map, [di, dj, 'units', 'Tree']);
 
   map = dissocIn(map, [di, dj, 'units', 'Tombstone']);
   map = dissocIn(map, [di, dj, 'units', 'Tree']);
 
   if (hasTree) {
     let [vi, vj] = findVillageInRegion(map, findRegion(map, ui, uj));
-    map = M.updateIn(map, [vi, vj, 'units', 'Village', 'wood'], add(1));
+    map = updateIn(map, [vi, vj, 'units', 'Village', 'wood'], add(1));
   }
 
   return map;
 }
 
 // cannon, knight. don't go into tree/don't clean tombstones
-function cantTreeAndTombstone(map, [di, dj], [ui, uj]) {
-  var destConfig = M.getIn(map, [di, dj]);
-  var hasTree = M.getIn(destConfig, ['units', 'Tree']);
-  var hasTombstone = M.getIn(destConfig, ['units', 'Tombstone']);
+function cantTreeAndTombstone(map, [di, dj]) {
+  var hasTree = getIn(map, [di, dj, 'units', 'Tree']);
+  var hasTombstone = getIn(map, [di, dj, 'units', 'Tombstone']);
 
-  // only knight and cannon can't gather wood & clear tombstone
-  if (hasTree || hasTombstone) {
-    return null;
-  }
-
-  return map;
+  return hasTree || hasTombstone ? null : map;
 }
 
 function stopCannon(map, [di, dj], [ui, uj]) {
-  return M.assocIn(map, [ui, uj, 'units', 'Cannon', 'hasMoved'], true);
+  return assocIn(map, [ui, uj, 'units', 'Cannon', 'hasMoved'], true);
 }
 
 function kill(map, [di, dj], [ui, uj], name) {
-  let destColor = getColor(map, di, dj);
-  let ownColor = getColor(map, ui, uj);
+  let destColor = getIn(map, [di, dj, 'color']);
+  let ownColor = getIn(map, [ui, uj, 'color']);
 
   if (destColor !== ownColor && destColor !== 'Gray') {
-    let units = M.getIn(map, [di, dj, 'units']);
+    let units = getIn(map, [di, dj, 'units']);
     let canAttack = M.every(a => {
       let enemyName = M.first(a);
       let config = M.second(a);
       if (!rankers.killable[enemyName]) {
         return true;
       }
-      let rank = M.get(config, 'rank');
+      let rank = get(config, 'rank');
       let enemyPreciseName = enemyName === 'Villager' ? rankers.villagerByRank[rank]
         : enemyName === 'Village' ? rankers.villageByRank[rank]
         : enemyName;
@@ -520,12 +477,12 @@ function kill(map, [di, dj], [ui, uj], name) {
 }
 
 function joinLands(map, [di, dj], [ui, uj]) {
-  var destColor = getColor(map, di, dj);
-  var ownColor = getColor(map, ui, uj);
+  var destColor = getIn(map, [di, dj, 'color']);
+  var ownColor = getIn(map, [ui, uj, 'color']);
 
   if (destColor !== ownColor) {
     var regions = findNeighbors(map, di, dj)
-      .filter(([i, j]) => getColor(map, i, j) === ownColor)
+      .filter(([i, j]) => getIn(map, [i, j, 'color']) === ownColor)
       .map(([i, j]) => findRegion(map, i, j));
 
     // will kill dupe villages
@@ -538,8 +495,8 @@ function joinLands(map, [di, dj], [ui, uj]) {
       // highest ranked village
       var [[i1, j1], size1] = js(pack1);
       var [[i2, j2], size2] = js(pack2);
-      var rank1 = M.getIn(map, [i1, j1, 'units', 'Village', 'rank']);
-      var rank2 = M.getIn(map, [i2, j2, 'units', 'Village', 'rank']);
+      var rank1 = getIn(map, [i1, j1, 'units', 'Village', 'rank']);
+      var rank2 = getIn(map, [i2, j2, 'units', 'Village', 'rank']);
 
       if (rank1 > rank2) {
         return pack1;
@@ -559,25 +516,25 @@ function joinLands(map, [di, dj], [ui, uj]) {
       }
 
       // TODO: [i, j, ...vGold]
-      var gold = M.getIn(map, [i, j, 'units', 'Village', 'gold']);
-      var wood = M.getIn(map, [i, j, 'units', 'Village', 'wood']);
+      var gold = getIn(map, [i, j, 'units', 'Village', 'gold']);
+      var wood = getIn(map, [i, j, 'units', 'Village', 'wood']);
 
-      map = M.updateIn(map, [bi, bj, 'units', 'Village', 'gold'], add(gold));
-      map = M.updateIn(map, [bi, bj, 'units', 'Village', 'wood'], add(wood));
+      map = updateIn(map, [bi, bj, 'units', 'Village', 'gold'], add(gold));
+      map = updateIn(map, [bi, bj, 'units', 'Village', 'wood'], add(wood));
       return dissocIn(map, [i, j, 'units', 'Village']);
     }, map, villageToRegionSize);
 
     // claim land, mark color
-    map = M.assocIn(map, [di, dj, 'color'], ownColor);
+    map = assocIn(map, [di, dj, 'color'], ownColor);
   }
 
   return map;
 }
 
 function _moveUnit(map, [di, dj], [ui, uj], unitName) {
-  var unit = M.getIn(map, [ui, uj, 'units', unitName]);
+  var unit = getIn(map, [ui, uj, 'units', unitName]);
   map = dissocIn(map, [ui, uj, 'units', unitName]);
-  return M.assocIn(map, [di, dj, 'units', unitName], unit);
+  return assocIn(map, [di, dj, 'units', unitName], unit);
 }
 
 function moveVillager(map, [di, dj], [ui, uj]) {
@@ -593,17 +550,17 @@ function clearDeadRegions(map) {
   let regions = M.filter(region => {
     let [i, j] = js(M.first(region));
 
-    return M.getIn(map, [i, j, 'color']) !== 'Gray';
+    return getIn(map, [i, j, 'color']) !== 'Gray';
   }, findAllRegions(map));
 
   return M.reduce((map, region) => {
     if (M.count(region) < 3) {
       return updateMap(map, region, cell => {
-        if (M.getIn(cell, ['units', 'Village'])) {
+        if (getIn(cell, ['units', 'Village'])) {
           cell = dissocIn(cell, ['units', 'Village']);
-          cell = M.assocIn(cell, ['units', 'Tree'], clj(defaultConfig.Tree));
+          cell = assocIn(cell, ['units', 'Tree'], clj(defaultConfig.Tree));
         }
-        return M.assoc(cell, 'color', 'Gray');
+        return assoc(cell, 'color', 'Gray');
       });
     }
 
@@ -616,7 +573,7 @@ function clearDeadRegions(map) {
     // no more village (killed), randomly place a hovel. wipe everything else
     // on tile (might be sea, might have conflicting units, etc.)
     let randCoords = js(randNth(region));
-    return M.assocIn(map, [...randCoords, 'units'], M.hashMap(
+    return assocIn(map, [...randCoords, 'units'], M.hashMap(
       'Village', clj(defaultConfig.Village),
       'Grass', clj(defaultConfig.Grass)
     ));
@@ -630,7 +587,7 @@ function killGrayMeadowCooldowns(map) {
   return updateMap(
     map,
     getUnitsByColorAndName(map, 'Gray', 'Meadow'),
-    cell => M.assocIn(cell, ['units', 'Meadow', 'cooldown'], 0)
+    cell => assocIn(cell, ['units', 'Meadow', 'cooldown'], 0)
   );
 }
 
@@ -729,22 +686,22 @@ function move(map, name, [di, dj], [ui, uj]) {
 
 
 function upgradeVillage(map, [i, j]) {
-  map = M.updateIn(map, [i, j, 'units', 'Village', 'wood'], add(-8));
-  return M.updateIn(map, [i, j, 'units', 'Village', 'rank'], add(1));
+  map = updateIn(map, [i, j, 'units', 'Village', 'wood'], add(-8));
+  return updateIn(map, [i, j, 'units', 'Village', 'rank'], add(1));
 }
 
 function upgradeVillager(map, [vi, vj], [si, sj]) {
-  let villageRank = M.getIn(map, [vi, vj, 'units', 'Village', 'rank']);
+  let villageRank = getIn(map, [vi, vj, 'units', 'Village', 'rank']);
   let villageName = rankers.villageByRank[villageRank];
-  let nextUnitRank = M.getIn(map, [si, sj, 'units', 'Villager', 'rank']) + 1;
+  let nextUnitRank = getIn(map, [si, sj, 'units', 'Villager', 'rank']) + 1;
   let nextUnitName = rankers.villagerByRank[nextUnitRank];
 
   if (!rankers.villageCanProduce[villageName][nextUnitName]) {
     return map;
   }
 
-  map = M.updateIn(map, [vi, vj, 'units', 'Village', 'gold'], add(-10));
-  return M.updateIn(map, [si, sj, 'units', 'Villager', 'rank'], add(1));
+  map = updateIn(map, [vi, vj, 'units', 'Village', 'gold'], add(-10));
+  return updateIn(map, [si, sj, 'units', 'Villager', 'rank'], add(1));
 }
 
 // -------------------------- menu actions over
@@ -1044,7 +1001,7 @@ var App = React.createClass({
     }
 
     // if (phase !== 'Player' ||
-    //   (!pendingAction && getColor(map, i, j) !== turns[currTurn]) ||
+    //   (!pendingAction && getIn(map, [i, j, 'color']) !== turns[currTurn]) ||
     //   (currTurn !== selfTurn) {
     //   this.setState(cancelPendingActionState);
     //   return;
@@ -1174,9 +1131,9 @@ var App = React.createClass({
 
     if (showMenu) {
       let [i, j] = selectedCoords;
-      let villager = getVillager(map, i, j);
-      let village = getVillage(map, i, j);
-      let cannon = M.getIn(map, [i, j, 'units', 'Cannon']);
+      let villager = getIn(map, [i, j, 'units', 'Villager']);
+      let village = getIn(map, [i, j, 'units', 'Village']);
+      let cannon = getIn(map, [i, j, 'units', 'Cannon']);
 
       let x = positioner.calcLeft(j, i);
       let y = positioner.calcTop(i);
@@ -1186,10 +1143,10 @@ var App = React.createClass({
         maybeMenu = (
           <Menu pos={[x, y]}>
             {getMenuItemsForVillager(
-              rankers.villagerByRank[M.get(villager, 'rank')],
+              rankers.villagerByRank[get(villager, 'rank')],
               js(villager),
-              M.getIn(map, [vi, vj, 'units', 'Village', 'gold']),
-              M.getIn(map, [vi, vj, 'units', 'Village', 'wood']),
+              getIn(map, [vi, vj, 'units', 'Village', 'gold']),
+              getIn(map, [vi, vj, 'units', 'Village', 'wood']),
               this.handleMenuItemClick
             )}
           </Menu>
@@ -1198,9 +1155,9 @@ var App = React.createClass({
         maybeMenu = (
           <Menu pos={[x, y]}>
             {getMenuItemsForVillage(
-              rankers.villageByRank[M.get(village, 'rank')],
-              M.get(village, 'gold'),
-              M.get(village, 'wood'),
+              rankers.villageByRank[get(village, 'rank')],
+              get(village, 'gold'),
+              get(village, 'wood'),
               this.handleMenuItemClick
             )}
           </Menu>
@@ -1210,8 +1167,8 @@ var App = React.createClass({
           <Menu pos={[x, y]}>
             {getMenuItemsForCannon(
               js(cannon),
-              M.get(village, 'gold'),
-              M.get(village, 'wood'),
+              get(village, 'gold'),
+              get(village, 'wood'),
               this.handleMenuItemClick
             )}
           </Menu>

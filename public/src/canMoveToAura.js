@@ -3,13 +3,12 @@
 var M = require('mori');
 var findNeighbors = require('./findNeighbors');
 var rankers = require('./rankers');
-var getColor = require('./getColor');
 
 function canMoveToAura(map, unitName, enemyColor, [i, j]) {
   // same tile can be protected by many. find 1 hex surrounding (no unit
   // protects more than 1 hex) and get highest ranked unit with aura
   return findNeighbors(map, i, j)
-    .filter(([i, j]) => getColor(map, i, j) === enemyColor)
+    .filter(([i, j]) => M.getIn(map, [i, j, 'color']) === enemyColor)
     .map(([i, j]) => M.getIn(map, [i, j, 'units']))
     .every(units => {
       let aurables = M.filter(a => rankers.hasAura[M.first(a)], units);
