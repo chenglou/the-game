@@ -19,6 +19,14 @@ var pendingActions = {
       ['New Soldier', 'newSoldier', 30, 0],
       ['New Knight', 'newKnight', 40, 0],
       ['New Watchtower', 'newWatchtower', 0, 5],
+      ['Upgrade to Castle', 'upgradeVillage', 0, 12],
+    ],
+    Castle: [
+      ['New Peasant', 'newPeasant', 10, 0],
+      ['New Infantry', 'newInfantry', 20, 0],
+      ['New Soldier', 'newSoldier', 30, 0],
+      ['New Knight', 'newKnight', 40, 0],
+      ['New Watchtower', 'newWatchtower', 0, 5],
     ],
   },
 
@@ -47,7 +55,6 @@ var pendingActions = {
     Knight: [
       // can't move into tree, etc. tramples meadow unless road
       ['Move', 'moveKnight', 0, 0],
-      // ['Kill', 'kill'],
     ],
   },
 

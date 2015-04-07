@@ -323,7 +323,7 @@ function combineVillagers(map, [di, dj], [ui, uj]) {
   var villageRank = getIn(map, [vi, vj, 'units', 'Village', 'rank']);
   var villageName = rankers.villageByRank[villageRank];
 
-  if (!rankers.villageCanProduce[villageName][mergedName]) {
+  if (!rankers.producibleVillagers[villageName][mergedName]) {
     return map;
   }
 
@@ -691,7 +691,11 @@ function move(map, name, [di, dj], [ui, uj]) {
 
 
 function upgradeVillage(map, [i, j]) {
+  let nextRank = getIn(map, [i, j, 'units', 'Village', 'rank']) + 1;
+  let nextName = rankers.villageByRank[nextRank];
+  let hpBoost = rankers.villageUpgradeHp[nextName];
   map = updateIn(map, [i, j, 'units', 'Village', 'wood'], add(-8));
+  map = updateIn(map, [i, j, 'units', 'Village', 'hp'], add(hpBoost));
   return updateIn(map, [i, j, 'units', 'Village', 'rank'], add(1));
 }
 
@@ -701,7 +705,7 @@ function upgradeVillager(map, [vi, vj], [si, sj]) {
   let nextUnitRank = getIn(map, [si, sj, 'units', 'Villager', 'rank']) + 1;
   let nextUnitName = rankers.villagerByRank[nextUnitRank];
 
-  if (!rankers.villageCanProduce[villageName][nextUnitName]) {
+  if (!rankers.producibleVillagers[villageName][nextUnitName]) {
     return map;
   }
 
