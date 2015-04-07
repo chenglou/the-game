@@ -1172,12 +1172,13 @@ var App = React.createClass({
           </Menu>
         );
       } else if (cannon) {
+        let [vi, vj] = findVillageInRegion(map, findRegion(map, i, j));
         maybeMenu = (
           <Menu pos={[x, y]}>
             {getMenuItemsForCannon(
               js(cannon),
-              get(village, 'gold'),
-              get(village, 'wood'),
+              getIn(map, [vi, vj, 'units', 'Village', 'gold']),
+              getIn(map, [vi, vj, 'units', 'Village', 'wood']),
               this.handleMenuItemClick
             )}
           </Menu>
