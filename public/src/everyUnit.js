@@ -31,7 +31,7 @@ var nameInDisplayOrder = {
 var defaultConfig = {
   Grass: {},
   Sea: {},
-  Village: {gold: 7, wood: 0, rank: 0},
+  Village: {gold: 7, wood: 0, rank: 0, hp: 1},
   Villager: {hasMoved: false, cooldown: 0, rank: 0},
   Road: {cooldown: 1},
   Meadow: {cooldown: 2},

@@ -15,12 +15,12 @@ var Village = React.createClass({
   },
 
   render: function() {
-    var {gold, wood, rank} = this.props;
+    var {gold, wood, rank, hp} = this.props;
 
     return (
       <UnitWrapper unitName={rankers.villageByRank[rank]}>
         <Badge notice={true}>
-          {gold + ' / ' + wood}
+          {gold + ' / ' + wood + ' / ' + hp}
         </Badge>
       </UnitWrapper>
     );

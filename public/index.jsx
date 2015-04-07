@@ -713,6 +713,44 @@ function upgradeVillager(map, [vi, vj], [si, sj]) {
   return updateIn(map, [si, sj, 'units', 'Villager', 'rank'], add(1));
 }
 
+function shootCannon(map, [di, dj], [ui, uj]) {
+  let area = M.into(
+    M.set(),
+    M.mapcat(
+      M.identity,
+      clj(findNeighbors(map, ui, uj).map(([i, j]) => findNeighbors(map, i, j)))
+    )
+  );
+  area = js(area);
+
+  let clickedInArea = area.some(([i, j]) => i === di && j === dj);
+  if (!clickedInArea) {
+    return map;
+  }
+
+  let village = getIn(map, [di, dj, 'units', 'Village']);
+  let villager = getIn(map, [di, dj, 'units', 'Villager']);
+  if (!village && !villager) {
+    return map;
+  }
+
+  let [oi, oj] = findVillageInRegion(map, findRegion(map, ui, uj));
+  map = updateIn(map, [oi, oj, 'units', 'Village', 'wood'], add(-1));
+
+  if (villager) {
+    map = dissocIn(map, [di, dj, 'units', 'Villager']);
+    map = updateIn(map, [di, dj], unitToTombstone);
+  } else if (village) {
+    // assuming village and villager can't coexist. meh
+    map = updateIn(map, [di, dj, 'units', 'Village', 'hp'], add(-1));
+    if (getIn(map, [di, dj, 'units', 'Village', 'hp']) === 0) {
+      map = dissocIn(map, [di, dj, 'units', 'Village']);
+    }
+  }
+
+  return clearDeadRegions(map);
+}
+
 // -------------------------- menu actions over
 
 var cancelPendingActionState = {
