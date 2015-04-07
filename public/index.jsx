@@ -314,14 +314,14 @@ function checkCantInvade(map, [di, dj], [ui, uj]) {
 }
 
 // can't invade protected tiles of higher rank
-function checkNeighborsAura(map, [di, dj], [ui, uj], unitName) {
+function checkNeighborsAura(map, [di, dj], [ui, uj], name) {
   var destColor = getIn(map, [di, dj, 'color']);
   var ownColor = getIn(map, [ui, uj, 'color']);
 
   // if enemy tile, check aura, might have many auras
   if (destColor !== ownColor &&
       destColor !== 'Gray' &&
-      !canMoveToAura(map, unitName, destColor, [di, dj])) {
+      !canMoveToAura(map, name, destColor, [di, dj])) {
     return null;
   }
 

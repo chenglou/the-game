@@ -16,11 +16,14 @@ function surroundWithSea(map) {
   var newMap = M.concat([row], butLast(M.rest(map)), [row]);
 
   // columns
-  newMap = M.map((row) => {
-    return M.concat([seaTileConfig], butLast(M.rest(row)), [seaTileConfig]);
+  newMap = M.map(row => {
+    return M.into(
+      M.vector(),
+      M.concat([seaTileConfig], butLast(M.rest(row)), [seaTileConfig])
+    );
   }, newMap);
 
-  return newMap;
+  return M.into(M.vector(), newMap);
 }
 
 module.exports = surroundWithSea;
