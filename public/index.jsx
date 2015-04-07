@@ -19,15 +19,10 @@ var surroundWithSea = require('./src/debug/surroundWithSea');
 var forceAddNewUnit = require('./src/debug/forceAddNewUnit');
 var getColor = require('./src/getColor');
 var findVillageInRegion = require('./src/findVillageInRegion');
-var {findRegion} = require('./src/findRegion');
-var movePeasant = require('./src/movePeasant');
-var moveInfantry = require('./src/moveInfantry');
-var moveSoldier = require('./src/moveSoldier');
-var moveKnight = require('./src/moveKnight');
+var {findRegion, findRegionM} = require('./src/findRegion');
 var trampleOnMeadow = require('./src/trampleOnMeadow');
 var canMoveToAura = require('./src/canMoveToAura');
 var updateMap = require('./src/updateMap');
-var findPath = require('./src/pathFinding');
 var map1 = require('./src/map/data/map1');
 
 var js = M.toJs;
@@ -71,17 +66,6 @@ function getVillager(map, i, j) {
 }
 
 // ----------- phases
-
-// peasant cultivateMeadow, enemy disconnects territory, meadow gray, never
-// matures
-// TODO: use after invasion cuts off land
-function killGrayMeadowCooldowns(map) {
-  return updateMap(
-    map,
-    getUnitsByColorAndName(map, 'Gray', 'Meadow'),
-    cell => M.assocIn(cell, ['units', 'Meadow', 'cooldown'], 0)
-  );
-}
 
 function growTrees(map) {
   let treeCoords = M.filter(
@@ -183,6 +167,18 @@ function payTime(map, turn) {
   }, map, getUnitsByColorAndName(map, turn, 'Village'));
 }
 
+function unitToTombstone(cell) {
+  cell = dissocIn(cell, ['units', 'Villager']);
+  // TODO: does cannon turn to tombstone?
+  cell = dissocIn(cell, ['units', 'Cannon']);
+  return M.assocIn(
+    cell,
+    ['units', 'Tombstone'],
+    clj(defaultConfig.Tombstone)
+  );
+}
+
+// TODO: cannon logic added. Check which other phase affects cannon
 function dieTime(map, turn) {
   var poorVillageCoords = M.filter(
     ([i, j]) => M.getIn(map, [i, j, 'units', 'Village', 'gold']) < 0,
@@ -195,15 +191,8 @@ function dieTime(map, turn) {
 
     // turn units into tombstones
     return findRegion(map, i, j)
-      .filter(([i, j]) => getVillager(map, i, j))
-      .reduce((map, [i, j]) => {
-        map = dissocIn(map, [i, j, 'units', 'Villager']);
-        return M.assocIn(
-          map,
-          [i, j, 'units', 'Tombstone'],
-          clj(defaultConfig.Tombstone)
-        );
-      }, map);
+      .filter(([i, j]) => getVillager(map, i, j) || M.getIn(map, [i, j, 'units', 'Cannon']))
+      .reduce((map, [i, j]) => unitToTombstone(M.getIn(map, [i, j])), map);
 
   }, map, poorVillageCoords);
 }
@@ -370,7 +359,59 @@ function build(map, [i, j], unitName, unitCooldown) {
   return M.assocIn(map, [i, j, 'units', 'Villager', 'cooldown'], unitCooldown);
 }
 
-function move(map, unitName, [di, dj], [ui, uj]) {
+// move helpers ===========
+function coordsToRegion(map) {
+  let coords = M.map((row, i) => {
+    return M.map((cell, j) => M.vector(i, j), row, M.range());
+  }, map, M.range());
+
+  return M.reduce((thing, coords) => {
+    let [i, j] = M.toJs(coords);
+    if (M.get(thing, coords)) {
+      return thing;
+    }
+
+    let region = findRegionM(map, i, j);
+
+    return M.reduce((thing, coords) => {
+      return M.assoc(thing, coords, region);
+    }, thing, region);
+  }, M.hashMap(), M.mapcat(M.identity, coords));
+}
+
+function findAllRegions(map) {
+  return M.distinct(M.vals(coordsToRegion(map)));
+}
+
+// move =======
+
+function checkMovingToNeighbors(map, [di, dj], [ui, uj]) {
+  // TODO: path finding, no need to have this anymore
+  var movingToNeighbor = findNeighbors(map, ui, uj)
+    .some(([i, j]) => i === di && j === dj);
+
+  if (!movingToNeighbor) {
+    return null;
+  }
+
+  return map;
+}
+
+// peasant, cannon
+function checkCantInvade(map, [di, dj], [ui, uj]) {
+  var destColor = getColor(map, di, dj);
+  var ownColor = getColor(map, ui, uj);
+
+  var isEnemyColor = destColor !== 'Gray' && destColor !== ownColor;
+  if (isEnemyColor) {
+    return null;
+  }
+
+  return map;
+}
+
+// can't invade protected tiles of higher rank
+function checkNeighborsAura(map, [di, dj], [ui, uj], unitName) {
   var destColor = getColor(map, di, dj);
   var ownColor = getColor(map, ui, uj);
 
@@ -378,15 +419,312 @@ function move(map, unitName, [di, dj], [ui, uj]) {
   if (destColor !== ownColor &&
       destColor !== 'Gray' &&
       !canMoveToAura(map, unitName, destColor, [di, dj])) {
-    return map;
+    return null;
   }
 
-  return {
-    Peasant: movePeasant,
-    Infantry: moveInfantry,
-    Soldier: moveSoldier,
-    Knight: moveKnight,
-  }[unitName](map, [di, dj], [ui, uj]);
+  return map;
+}
+
+function checkConflictVillager(map, [di, dj], [ui, uj]) {
+  if (hasConflict(map, 'Villager', di, dj)) {
+    return null;
+  }
+
+  return map;
+}
+
+function checkConflictCannon(map, [di, dj], [ui, uj]) {
+  if (hasConflict(map, 'Cannon', di, dj)) {
+    return null;
+  }
+
+  return map;
+}
+
+function stopVillagerUnderConditions(map, [di, dj], [ui, uj]) {
+  let destColor = getColor(map, di, dj);
+  let ownColor = getColor(map, ui, uj);
+
+  let destConfig = M.getIn(map, [di, dj]);
+  let hasTree = M.getIn(destConfig, ['units', 'Tree']);
+  let hasTombstone = M.getIn(destConfig, ['units', 'Tombstone']);
+
+  if (hasTree || hasTombstone || destColor !== ownColor) {
+    map = M.assocIn(map, [ui, uj, 'units', 'Villager', 'hasMoved'], true);
+  }
+
+  return map;
+}
+
+function cleanTreeAndTombstone(map, [di, dj], [ui, uj]) {
+  var hasTree = M.getIn(map, [di, dj, 'units', 'Tree']);
+
+  map = dissocIn(map, [di, dj, 'units', 'Tombstone']);
+  map = dissocIn(map, [di, dj, 'units', 'Tree']);
+
+  if (hasTree) {
+    let [vi, vj] = findVillageInRegion(map, findRegion(map, ui, uj));
+    map = M.updateIn(map, [vi, vj, 'units', 'Village', 'wood'], add(1));
+  }
+
+  return map;
+}
+
+// cannon, knight. don't go into tree/don't clean tombstones
+function cantTreeAndTombstone(map, [di, dj], [ui, uj]) {
+  var destConfig = M.getIn(map, [di, dj]);
+  var hasTree = M.getIn(destConfig, ['units', 'Tree']);
+  var hasTombstone = M.getIn(destConfig, ['units', 'Tombstone']);
+
+  // only knight and cannon can't gather wood & clear tombstone
+  if (hasTree || hasTombstone) {
+    return null;
+  }
+
+  return map;
+}
+
+function stopCannon(map, [di, dj], [ui, uj]) {
+  return M.assocIn(map, [ui, uj, 'units', 'Cannon', 'hasMoved'], true);
+}
+
+function kill(map, [di, dj], [ui, uj], name) {
+  let destColor = getColor(map, di, dj);
+  let ownColor = getColor(map, ui, uj);
+
+  if (destColor !== ownColor && destColor !== 'Gray') {
+    let units = M.getIn(map, [di, dj, 'units']);
+    let canAttack = M.every(a => {
+      let enemyName = M.first(a);
+      let config = M.second(a);
+      if (!rankers.killable[enemyName]) {
+        return true;
+      }
+      let rank = M.get(config, 'rank');
+      let enemyPreciseName = enemyName === 'Villager' ? rankers.villagerByRank[rank]
+        : enemyName === 'Village' ? rankers.villageByRank[rank]
+        : enemyName;
+
+      return rankers.canAttack[name][enemyPreciseName];
+    }, units);
+
+    if (!canAttack) {
+      return null;
+    }
+
+    map = dissocIn(map, [di, dj, 'units', 'Village']);
+    map = dissocIn(map, [di, dj, 'units', 'Villager']);
+  }
+
+  return map;
+}
+
+function joinLands(map, [di, dj], [ui, uj]) {
+  var destColor = getColor(map, di, dj);
+  var ownColor = getColor(map, ui, uj);
+
+  if (destColor !== ownColor) {
+    var regions = findNeighbors(map, di, dj)
+      .filter(([i, j]) => getColor(map, i, j) === ownColor)
+      .map(([i, j]) => findRegion(map, i, j));
+
+    // will kill dupe villages
+    var villageToRegionSize = M.zipmap(
+      clj(regions.map(region => findVillageInRegion(map, region))),
+      regions.map(region => region.length)
+    );
+
+    var bestVillagePack = M.reduce((pack1, pack2) => {
+      // highest ranked village
+      var [[i1, j1], size1] = js(pack1);
+      var [[i2, j2], size2] = js(pack2);
+      var rank1 = M.getIn(map, [i1, j1, 'units', 'Village', 'rank']);
+      var rank2 = M.getIn(map, [i2, j2, 'units', 'Village', 'rank']);
+
+      if (rank1 > rank2) {
+        return pack1;
+      } else if (rank1 < rank2) {
+        return pack2;
+      }
+      // if same rank: biggest region village
+      return size1 > size2 ? pack1 : pack2;
+    }, villageToRegionSize);
+
+    var [[bi, bj], size] = js(bestVillagePack);
+
+    map = M.reduce((map, pack) => {
+      var [[i, j], size] = js(pack);
+      if (i === bi && j === bj) {
+        return map;
+      }
+
+      // TODO: [i, j, ...vGold]
+      var gold = M.getIn(map, [i, j, 'units', 'Village', 'gold']);
+      var wood = M.getIn(map, [i, j, 'units', 'Village', 'wood']);
+
+      map = M.updateIn(map, [bi, bj, 'units', 'Village', 'gold'], add(gold));
+      map = M.updateIn(map, [bi, bj, 'units', 'Village', 'wood'], add(wood));
+      return dissocIn(map, [i, j, 'units', 'Village']);
+    }, map, villageToRegionSize);
+
+    // claim land, mark color
+    map = M.assocIn(map, [di, dj, 'color'], ownColor);
+  }
+
+  return map;
+}
+
+function _moveUnit(map, [di, dj], [ui, uj], unitName) {
+  var unit = M.getIn(map, [ui, uj, 'units', unitName]);
+  map = dissocIn(map, [ui, uj, 'units', unitName]);
+  return M.assocIn(map, [di, dj, 'units', unitName], unit);
+}
+
+function moveVillager(map, [di, dj], [ui, uj]) {
+  return _moveUnit(map, [di, dj], [ui, uj], 'Villager');
+}
+
+function moveCannon(map, [di, dj], [ui, uj]) {
+  return _moveUnit(map, [di, dj], [ui, uj], 'Cannon');
+}
+
+function clearDeadRegions(map) {
+  // discard gray ones
+  let regions = M.filter(region => {
+    let [i, j] = js(M.first(region));
+
+    return M.getIn(map, [i, j, 'color']) !== 'Gray';
+  }, findAllRegions(map));
+
+  return M.reduce((map, region) => {
+    if (M.count(region) < 3) {
+      return updateMap(map, region, cell => {
+        if (M.getIn(cell, ['units', 'Village'])) {
+          cell = dissocIn(cell, ['units', 'Village']);
+          cell = M.assocIn(cell, ['units', 'Tree'], clj(defaultConfig.Tree));
+        }
+        return M.assoc(cell, 'color', 'Gray');
+      });
+    }
+
+    let villageCoords = findVillageInRegion(map, region);
+    if (villageCoords) {
+      // nothing to do here
+      return map;
+    }
+
+    // no more village (killed), randomly place a hovel. wipe everything else
+    // on tile (might be sea, might have conflicting units, etc.)
+    let randCoords = js(randNth(region));
+    return M.assocIn(map, [...randCoords, 'units'], M.hashMap(
+      'Village', clj(defaultConfig.Village),
+      'Grass', clj(defaultConfig.Grass)
+    ));
+  }, map, regions);
+}
+
+// peasant cultivateMeadow, enemy disconnects territory, meadow gray, never
+// matures
+// TODO: use after invasion cuts off land
+function killGrayMeadowCooldowns(map) {
+  return updateMap(
+    map,
+    getUnitsByColorAndName(map, 'Gray', 'Meadow'),
+    cell => M.assocIn(cell, ['units', 'Meadow', 'cooldown'], 0)
+  );
+}
+
+// strangled units after land cut-off, use after invasion
+function killGrayUnits(map) {
+ map = updateMap(
+   map,
+   getUnitsByColorAndName(map, 'Gray', 'Cannon'),
+   unitToTombstone
+ );
+
+ return updateMap(
+   map,
+   getUnitsByColorAndName(map, 'Gray', 'Villager'),
+   unitToTombstone
+ );
+}
+
+function move(map, name, [di, dj], [ui, uj]) {
+  let ops = {
+    Peasant: [
+      checkMovingToNeighbors,
+      checkCantInvade,
+      stopVillagerUnderConditions,
+      cleanTreeAndTombstone,
+      checkConflictVillager,
+      joinLands,
+      moveVillager,
+    ],
+    Infantry: [
+      checkMovingToNeighbors,
+      checkNeighborsAura,
+      stopVillagerUnderConditions,
+      cleanTreeAndTombstone,
+      kill,
+      checkConflictVillager,
+      joinLands,
+      moveVillager,
+      clearDeadRegions,
+      killGrayMeadowCooldowns,
+      killGrayUnits,
+    ],
+    Soldier: [
+      checkMovingToNeighbors,
+      checkNeighborsAura,
+      stopVillagerUnderConditions,
+      cleanTreeAndTombstone,
+      trampleOnMeadow,
+      kill,
+      checkConflictVillager,
+      joinLands,
+      moveVillager,
+      clearDeadRegions,
+      killGrayMeadowCooldowns,
+      killGrayUnits,
+    ],
+    Knight: [
+      checkMovingToNeighbors,
+      checkNeighborsAura,
+      cantTreeAndTombstone,
+      stopVillagerUnderConditions,
+      trampleOnMeadow,
+      kill,
+      checkConflictVillager,
+      joinLands,
+      moveVillager,
+      clearDeadRegions,
+      killGrayMeadowCooldowns,
+      killGrayUnits,
+    ],
+    Cannon: [
+      checkMovingToNeighbors,
+      checkCantInvade,
+      cantTreeAndTombstone,
+      stopCannon,
+      trampleOnMeadow,
+      checkConflictCannon,
+      joinLands,
+      moveCannon,
+    ],
+  };
+
+  let res = map;
+  for (var i = 0; i < ops[name].length; i++) {
+    let oldRes = res;
+    res = ops[name][i](res, [di, dj], [ui, uj], name);
+    if (res == null) {
+      ops[name][i](oldRes, [di, dj], [ui, uj], name);
+
+      return map;
+    }
+  }
+
+  return res;
 }
 
 
@@ -739,10 +1077,14 @@ var App = React.createClass({
       newMap = move(map, 'Soldier', [i, j], selectedCoords);
     } else if (pendingAction === 'moveKnight') {
       newMap = move(map, 'Knight', [i, j], selectedCoords);
+    } else if (pendingAction === 'moveCannon') {
+      newMap = move(map, 'Cannon', [i, j], selectedCoords);
     } else if (pendingAction === 'newWatchtower') {
       newMap = newWatchtower(map, [i, j], selectedCoords);
     } else if (pendingAction === 'combineVillagers') {
       newMap = combineVillagers(map, [i, j], selectedCoords);
+    } else if (pendingAction === 'shootCannon') {
+      newMap = shootCannon(map, [i, j], selectedCoords);
     }
 
     this.setState({
