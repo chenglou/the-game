@@ -1,72 +1,68 @@
-// desc, unique action name, gold, wood
-var pendingActions = {
+'use strict';
+
+let newPeasant = ['New Peasant', 'newVillager', {gold: 10, wood: 0, name: 'Peasant'}];
+let newInfantry = ['New Infantry', 'newVillager', {gold: 20, wood: 0, name: 'Infantry'}];
+let newSoldier = ['New Soldier', 'newVillager', {gold: 30, wood: 0, name: 'Soldier'}];
+let newKnight = ['New Knight', 'newVillager', {gold: 40, wood: 0, name: 'Knight'}];
+let newWatchtower = ['New Watchtower', 'newWatchtower', {gold: 0, wood: 5, name: 'Watchtower'}];
+let combine = ['Combine', 'combineVillagers', {}];
+
+let pendingActions = {
   Village: {
     Hovel: [
-      ['New Peasant', 'newPeasant', 10, 0],
-      ['New Infantry', 'newInfantry', 20, 0],
-      ['Upgrade to Town', 'upgradeVillage', 0, 8],
+      newPeasant,
+      newInfantry,
+      ['Upgrade to Town', 'upgradeVillage', {gold: 0, wood: 8, nextName: 'Town'}],
     ],
     Town: [
-      ['New Peasant', 'newPeasant', 10, 0],
-      ['New Infantry', 'newInfantry', 20, 0],
-      ['New Soldier', 'newSoldier', 30, 0],
-      ['New Watchtower', 'newWatchtower', 0, 5],
-      ['Upgrade to Fort', 'upgradeVillage', 0, 8],
+      newPeasant,
+      newInfantry,
+      newSoldier,
+      newWatchtower,
+      ['Upgrade to Fort', 'upgradeVillage', {gold: 0, wood: 8, nextName: 'Fort'}],
     ],
     Fort: [
-      ['New Peasant', 'newPeasant', 10, 0],
-      ['New Infantry', 'newInfantry', 20, 0],
-      ['New Soldier', 'newSoldier', 30, 0],
-      ['New Knight', 'newKnight', 40, 0],
-      ['New Watchtower', 'newWatchtower', 0, 5],
-      ['Upgrade to Castle', 'upgradeVillage', 0, 12],
+      newPeasant,
+      newInfantry,
+      newSoldier,
+      newKnight,
+      newWatchtower,
+      ['Upgrade to Castle', 'upgradeVillage', {gold: 0, wood: 12, nextName: 'Castle'}],
     ],
-    Castle: [
-      ['New Peasant', 'newPeasant', 10, 0],
-      ['New Infantry', 'newInfantry', 20, 0],
-      ['New Soldier', 'newSoldier', 30, 0],
-      ['New Knight', 'newKnight', 40, 0],
-      ['New Watchtower', 'newWatchtower', 0, 5],
-    ],
+    Castle: [newPeasant, newInfantry, newSoldier, newKnight, newWatchtower],
   },
 
   Villager: {
     Peasant: [
-      // can't invade
-      ['Move', 'movePeasant', 0, 0],
-      ['Cultivate Meadow', 'cultivateMeadow', 0, 0],
-      ['Build Road', 'buildRoad', 0, 0],
-      ['Upgrade to Infantry', 'upgradeVillager', 10, 0],
-      ['Combine', 'combineVillagers', 0, 0]
+      ['Move', 'move', {name: 'Peasant'}],
+      ['Cultivate Meadow', 'build', {name: 'Meadow', cooldown: 2}],
+      ['Build Road', 'build', {name: 'Road', cooldown: 1}],
+      ['Upgrade to Infantry', 'upgradeVillager', {gold: 10, wood: 0, nextName: 'Infantry'}],
+      combine,
     ],
     Infantry: [
-      ['Move', 'moveInfantry', 0, 0],
-      ['Upgrade to Soldier', 'upgradeVillager', 10, 0],
-      // ['Kill', 'kill'],
-      ['Combine', 'combineVillagers', 0, 0]
+      ['Move', 'move', {name: 'Infantry'}],
+      ['Upgrade to Soldier', 'upgradeVillager', {gold: 10, wood: 0, nextName: 'Soldier'}],
+      combine,
     ],
     Soldier: [
-      // tramples meadow unless there's a road
-      ['Move', 'moveSoldier', 0, 0],
-      ['Upgrade to Knight', 'upgradeVillager', 10, 0],
-      // ['Kill', 'kill'],
-      ['Combine', 'combineVillagers', 0, 0]
+      ['Move', 'move', {name: 'Soldier'}],
+      ['Upgrade to Knight', 'upgradeVillager', {gold: 10, wood: 0, nextName: 'Knight'}],
+      combine,
     ],
     Knight: [
-      // can't move into tree, etc. tramples meadow unless road
-      ['Move', 'moveKnight', 0, 0],
+      ['Move', 'move', {name: 'Knight'}],
     ],
   },
 
   Cannon: [
-    ['Move', 'moveCannon', 0, 0],
-    ['Shoot', 'shootCannon', 0, 1],
+    ['Move', 'move', {name: 'Cannon'}],
+    ['Shoot', 'shootCannon', {gold: 0, wood: 1}],
   ],
 };
 
 var immediateActions = {
-  cultivateMeadow: true,
-  buildRoad: true,
+  build: true,
   upgradeVillage: true,
   upgradeVillager: true,
 };

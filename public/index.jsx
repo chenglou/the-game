@@ -12,7 +12,7 @@ var hasConflict = require('./src/hasConflict');
 var positioner = require('./src/map/positioner');
 var {defaultConfig} = require('./src/everyUnit');
 var rankers = require('./src/rankers');
-var {pendingActions, immediateActions} = require('./src/actions');
+var {immediateActions} = require('./src/actions');
 var Firebase = require('firebase');
 var UnitSelector = require('./src/debug/UnitSelector');
 var surroundWithSea = require('./src/debug/surroundWithSea');
@@ -22,6 +22,7 @@ var {findRegion, findRegionM} = require('./src/findRegion');
 var trampleOnMeadow = require('./src/trampleOnMeadow');
 var canMoveToAura = require('./src/canMoveToAura');
 var updateMap = require('./src/updateMap');
+var getMenuItems = require('./src/getMenuItems');
 var map1 = require('./src/map/data/map1');
 
 let js = M.toJs;
@@ -194,95 +195,18 @@ function payOrDie(map, turn) {
 
 // -------------------------- phases over
 
-function getMenuItemsForVillage(typeName, gold, wood, cb) {
-  return pendingActions.Village[typeName].map(([desc, action, goldReq, woodReq]) => {
-    if (gold >= goldReq && wood >= woodReq) {
-      return (
-        <MenuItem key={action} onClick={cb.bind(null, action)}>
-          {desc}
-        </MenuItem>
-      );
-    }
-
-    return (
-      <MenuItem key={action} disabled={true}>
-        {desc}
-      </MenuItem>
-    );
-  });
-}
-
-function getMenuItemsForVillager(unitName, {hasMoved, cooldown}, gold, wood, cb) {
-  if (hasMoved) {
-    return [
-      <MenuItem key="hasMoved" disabled={true}>
-        Already Moved
-      </MenuItem>
-    ];
-  }
-  if (cooldown > 0) {
-    return [
-      <MenuItem key="cooldown" disabled={true}>
-        {`Cooldown (${cooldown})`}
-      </MenuItem>
-    ];
-  }
-
-  return pendingActions.Villager[unitName].map(([desc, action, goldReq, woodReq]) => {
-    if (gold >= goldReq && wood >= woodReq) {
-      return (
-        <MenuItem key={action} onClick={cb.bind(null, action)}>
-          {desc}
-        </MenuItem>
-      );
-    }
-
-    return (
-      <MenuItem key={action} disabled={true}>
-        {desc}
-      </MenuItem>
-    );
-  });
-}
-
-function getMenuItemsForCannon({hasMoved}, gold, wood, cb) {
-  if (hasMoved) {
-    return [
-      <MenuItem key="hasMoved" disabled={true}>
-        Already Moved
-      </MenuItem>
-    ];
-  }
-
-  return pendingActions.Cannon.map(([desc, action, goldReq, woodReq]) => {
-    if (gold >= goldReq && wood >= woodReq) {
-      return (
-        <MenuItem key={action} onClick={cb.bind(null, action)}>
-          {desc}
-        </MenuItem>
-      );
-    }
-
-    return (
-      <MenuItem key={action} disabled={true}>
-        {desc}
-      </MenuItem>
-    );
-  });
-}
-
-function newVillager(map, [di, dj], [vi, vj], unitName, gold) {
+function newVillager(map, [di, dj], [vi, vj], {gold, name}) {
   if (!coordsInRegion(map, [vi, vj], [di, dj]) ||
       hasConflict(map, 'Villager', di, dj)) {
     return map;
   }
 
-  if (unitName === 'Knight' || unitName === 'Soldier') {
-    map = trampleOnMeadow(map, unitName, [di, dj]);
+  if (name === 'Knight' || name === 'Soldier') {
+    map = trampleOnMeadow(map, name, [di, dj]);
   }
 
   map = updateIn(map, [vi, vj, 'units', 'Village', 'gold'], add(-gold));
-  var rank = rankers.villagerByRank.indexOf(unitName);
+  var rank = rankers.villagerByRank.indexOf(name);
 
   return assocIn(
     map,
@@ -291,13 +215,14 @@ function newVillager(map, [di, dj], [vi, vj], unitName, gold) {
   );
 }
 
-function newWatchtower(map, [di, dj], [vi, vj]) {
+function newWatchtower(map, [di, dj], [vi, vj], {gold, wood}) {
   if (!coordsInRegion(map, [vi, vj], [di, dj]) ||
       hasConflict(map, 'Watchtower', di, dj)) {
     return map;
   }
 
-  map = updateIn(map, [vi, vj, 'units', 'Village', 'wood'], add(-5));
+  map = updateIn(map, [vi, vj, 'units', 'Village', 'gold'], add(-gold));
+  map = updateIn(map, [vi, vj, 'units', 'Village', 'wood'], add(-wood));
 
   return assocIn(
     map,
@@ -336,13 +261,13 @@ function combineVillagers(map, [di, dj], [ui, uj]) {
   );
 }
 
-function build(map, [i, j], unitName, unitCooldown) {
-  if (hasConflict(map, unitName, i, j)) {
+function build(map, [i, j], {name, cooldown}) {
+  if (hasConflict(map, name, i, j)) {
     return map;
   }
 
-  map = assocIn(map, [i, j, 'units', unitName], clj(defaultConfig[unitName]));
-  return assocIn(map, [i, j, 'units', 'Villager', 'cooldown'], unitCooldown);
+  map = assocIn(map, [i, j, 'units', name], clj(defaultConfig[name]));
+  return assocIn(map, [i, j, 'units', 'Villager', 'cooldown'], cooldown);
 }
 
 // move helpers ===========
@@ -611,7 +536,7 @@ function killGrayUnits(map) {
  );
 }
 
-function move(map, name, [di, dj], [ui, uj]) {
+function move(map, [di, dj], [ui, uj], {name}) {
   let ops = {
     Peasant: [
       checkMovingToNeighbors,
@@ -689,31 +614,28 @@ function move(map, name, [di, dj], [ui, uj]) {
   return res;
 }
 
-
-function upgradeVillage(map, [i, j]) {
-  let nextRank = getIn(map, [i, j, 'units', 'Village', 'rank']) + 1;
-  let nextName = rankers.villageByRank[nextRank];
+function upgradeVillage(map, [i, j], {gold, wood, nextName}) {
   let hpBoost = rankers.villageUpgradeHp[nextName];
-  map = updateIn(map, [i, j, 'units', 'Village', 'wood'], add(-8));
+  map = updateIn(map, [i, j, 'units', 'Village', 'gold'], add(-gold));
+  map = updateIn(map, [i, j, 'units', 'Village', 'wood'], add(-wood));
   map = updateIn(map, [i, j, 'units', 'Village', 'hp'], add(hpBoost));
   return updateIn(map, [i, j, 'units', 'Village', 'rank'], add(1));
 }
 
-function upgradeVillager(map, [vi, vj], [si, sj]) {
+function upgradeVillager(map, [vi, vj], [si, sj], {gold, wood, nextName}) {
   let villageRank = getIn(map, [vi, vj, 'units', 'Village', 'rank']);
   let villageName = rankers.villageByRank[villageRank];
-  let nextUnitRank = getIn(map, [si, sj, 'units', 'Villager', 'rank']) + 1;
-  let nextUnitName = rankers.villagerByRank[nextUnitRank];
 
-  if (!rankers.producibleVillagers[villageName][nextUnitName]) {
+  if (!rankers.producibleVillagers[villageName][nextName]) {
     return map;
   }
 
-  map = updateIn(map, [vi, vj, 'units', 'Village', 'gold'], add(-10));
+  map = updateIn(map, [vi, vj, 'units', 'Village', 'gold'], add(-gold));
+  map = updateIn(map, [vi, vj, 'units', 'Village', 'wood'], add(-wood));
   return updateIn(map, [si, sj, 'units', 'Villager', 'rank'], add(1));
 }
 
-function shootCannon(map, [di, dj], [ui, uj]) {
+function shootCannon(map, [di, dj], [ui, uj], {gold, wood}) {
   let area = M.into(
     M.set(),
     M.mapcat(
@@ -735,7 +657,8 @@ function shootCannon(map, [di, dj], [ui, uj]) {
   }
 
   let [oi, oj] = findVillageInRegion(map, findRegion(map, ui, uj));
-  map = updateIn(map, [oi, oj, 'units', 'Village', 'wood'], add(-1));
+  map = updateIn(map, [oi, oj, 'units', 'Village', 'gold'], add(-gold));
+  map = updateIn(map, [oi, oj, 'units', 'Village', 'wood'], add(-wood));
 
   if (villager) {
     map = dissocIn(map, [di, dj, 'units', 'Villager']);
@@ -987,12 +910,12 @@ var App = React.createClass({
     this.setState(cancelPendingActionState, this.repeatCycle);
   },
 
-  handleMenuItemClick: function(action) {
+  handleMenuItemClick: function([action, rest]) {
     var {map, selectedCoords} = this.state;
 
     if (!immediateActions[action]) {
       this.setState({
-        pendingAction: action,
+        pendingAction: [action, rest],
         showMenu: false,
       });
       return;
@@ -1000,15 +923,13 @@ var App = React.createClass({
 
     var newMap;
     if (action === 'upgradeVillage') {
-      newMap = upgradeVillage(map, selectedCoords);
-    } else if (action === 'cultivateMeadow') {
-      newMap = build(map, selectedCoords, 'Meadow', 2);
-    } else if (action === 'buildRoad') {
-      newMap = build(map, selectedCoords, 'Road', 1);
+      newMap = upgradeVillage(map, selectedCoords, rest);
+    } else if (action === 'build') {
+      newMap = build(map, selectedCoords, rest);
     } else if (action === 'upgradeVillager') {
       let region = findRegion(map, ...selectedCoords);
       let villageCoords = findVillageInRegion(map, region);
-      newMap = upgradeVillager(map, villageCoords, selectedCoords);
+      newMap = upgradeVillager(map, villageCoords, selectedCoords, rest);
     }
 
     this.setState({
@@ -1063,32 +984,18 @@ var App = React.createClass({
       return;
     }
 
-    var newMap;
-    if (pendingAction === 'newPeasant') {
-      // TODO money already in actions
-      newMap = newVillager(map, [i, j], selectedCoords, 'Peasant', 10);
-    } else if (pendingAction === 'newInfantry') {
-      newMap = newVillager(map, [i, j], selectedCoords, 'Infantry', 20);
-    } else if (pendingAction === 'newSoldier') {
-      newMap = newVillager(map, [i, j], selectedCoords, 'Soldier', 30);
-    } else if (pendingAction === 'newKnight') {
-      newMap = newVillager(map, [i, j], selectedCoords, 'Knight', 40);
-    } else if (pendingAction === 'movePeasant') {
-      newMap = move(map, 'Peasant', [i, j], selectedCoords);
-    } else if (pendingAction === 'moveInfantry') {
-      newMap = move(map, 'Infantry', [i, j], selectedCoords);
-    } else if (pendingAction === 'moveSoldier') {
-      newMap = move(map, 'Soldier', [i, j], selectedCoords);
-    } else if (pendingAction === 'moveKnight') {
-      newMap = move(map, 'Knight', [i, j], selectedCoords);
-    } else if (pendingAction === 'moveCannon') {
-      newMap = move(map, 'Cannon', [i, j], selectedCoords);
-    } else if (pendingAction === 'newWatchtower') {
-      newMap = newWatchtower(map, [i, j], selectedCoords);
-    } else if (pendingAction === 'combineVillagers') {
+    let newMap;
+    let [action, rest] = pendingAction;
+    if (action === 'newVillager') {
+      newMap = newVillager(map, [i, j], selectedCoords, rest);
+    } else if (action === 'move') {
+      newMap = move(map, [i, j], selectedCoords, rest);
+    } else if (action === 'newWatchtower') {
+      newMap = newWatchtower(map, [i, j], selectedCoords, rest);
+    } else if (action === 'combineVillagers') {
       newMap = combineVillagers(map, [i, j], selectedCoords);
-    } else if (pendingAction === 'shootCannon') {
-      newMap = shootCannon(map, [i, j], selectedCoords);
+    } else if (action === 'shootCannon') {
+      newMap = shootCannon(map, [i, j], selectedCoords, rest);
     }
 
     this.setState({
@@ -1189,7 +1096,7 @@ var App = React.createClass({
         let [vi, vj] = findVillageInRegion(map, findRegion(map, i, j));
         maybeMenu = (
           <Menu pos={[x, y]}>
-            {getMenuItemsForVillager(
+            {getMenuItems.villager(
               rankers.villagerByRank[get(villager, 'rank')],
               js(villager),
               getIn(map, [vi, vj, 'units', 'Village', 'gold']),
@@ -1201,7 +1108,7 @@ var App = React.createClass({
       } else if (village) {
         maybeMenu = (
           <Menu pos={[x, y]}>
-            {getMenuItemsForVillage(
+            {getMenuItems.village(
               rankers.villageByRank[get(village, 'rank')],
               get(village, 'gold'),
               get(village, 'wood'),
@@ -1213,7 +1120,7 @@ var App = React.createClass({
         let [vi, vj] = findVillageInRegion(map, findRegion(map, i, j));
         maybeMenu = (
           <Menu pos={[x, y]}>
-            {getMenuItemsForCannon(
+            {getMenuItems.cannon(
               js(cannon),
               getIn(map, [vi, vj, 'units', 'Village', 'gold']),
               getIn(map, [vi, vj, 'units', 'Village', 'wood']),
