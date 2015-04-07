@@ -179,7 +179,10 @@ function dieTime(map, turn) {
     // turn units into tombstones
     return findRegion(map, i, j)
       .filter(([i, j]) => getIn(map, [i, j, 'units', 'Villager']) || getIn(map, [i, j, 'units', 'Cannon']))
-      .reduce((map, [i, j]) => unitToTombstone(getIn(map, [i, j])), map);
+      .reduce(
+        (map, [i, j]) => updateIn(map, [i, j], cell => unitToTombstone(cell)),
+        map
+      );
 
   }, map, poorVillageCoords);
 }
