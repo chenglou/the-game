@@ -14,7 +14,7 @@ function forceAddNewUnit(map, i, j, color, unitName) {
 
   map = M.assocIn(map, [i, j, 'color'], color);
 
-  var config = M.toClj(everyUnitDefaultConfigDebug[unitName]);
+  var config = M.get(everyUnitDefaultConfigDebug, unitName);
 
   return M.assocIn(map, [i, j, 'units', unitName], config);
 }

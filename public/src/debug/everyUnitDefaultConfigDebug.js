@@ -1,17 +1,10 @@
 'use strict';
 
-var {defaultConfig} = require('../everyUnit');
+let {defaultConfig} = require('../everyUnit');
+let M = require('mori');
 
-var everyUnitDefaultConfigDebug = {
-  ...defaultConfig,
-  Road: {
-    ...defaultConfig.Road,
-    cooldown: 0,
-  },
-  Meadow: {
-    ...defaultConfig.Meadow,
-    cooldown: 0,
-  },
-};
+let config = defaultConfig;
+config = M.assocIn(config, ['Road', 'cooldown'], 0);
+config = M.assocIn(config, ['Meadow', 'cooldown'], 0);
 
-module.exports = everyUnitDefaultConfigDebug;
+module.exports = config;

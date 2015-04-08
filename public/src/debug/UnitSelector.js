@@ -4,6 +4,7 @@ var React = require('react');
 var everyUnit = require('../everyUnit');
 var units = require('../units');
 var everyUnitDefaultConfigDebug = require('./everyUnitDefaultConfigDebug');
+var M = require('mori');
 
 var p = React.PropTypes;
 
@@ -35,7 +36,7 @@ var LandBox = React.createClass({
 
     return (
       <div {...props} style={s}>
-        <Unit {...everyUnitDefaultConfigDebug[unitName]}></Unit>
+        <Unit {...M.toJs(M.get(everyUnitDefaultConfigDebug, unitName))} />
         <div style={labelS}>
           {unitName}
         </div>

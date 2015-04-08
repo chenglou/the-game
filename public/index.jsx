@@ -23,6 +23,7 @@ var trampleOnMeadow = require('./src/trampleOnMeadow');
 var canMoveToAura = require('./src/canMoveToAura');
 var updateMap = require('./src/updateMap');
 var getMenuItems = require('./src/getMenuItems');
+var pathFinding = require('./src/pathFinding');
 var map1 = require('./src/map/data/map1');
 
 let js = M.toJs;
@@ -68,7 +69,7 @@ function growTrees(map) {
     }
 
     var [i2, j2] = randNth(emptyNeighbors);
-    return assocIn(map, [i2, j2, 'units', 'Tree'], clj(defaultConfig.Tree));
+    return assocIn(map, [i2, j2, 'units', 'Tree'], get(defaultConfig, 'Tree'));
   }, map, treeCoords);
 }
 
@@ -85,7 +86,7 @@ function killTombstones(map, turn) {
 
       return hasMeadow || hasRoad
         ? cell
-        : assocIn(cell, ['units', 'Tree'], clj(defaultConfig.Tree));
+        : assocIn(cell, ['units', 'Tree'], get(defaultConfig, 'Tree'));
     }
   );
 }
@@ -162,7 +163,7 @@ function unitToTombstone(cell) {
   return assocIn(
     cell,
     ['units', 'Tombstone'],
-    clj(defaultConfig.Tombstone)
+    get(defaultConfig, 'Tombstone')
   );
 }
 
@@ -211,7 +212,7 @@ function newVillager(map, [di, dj], [vi, vj], {gold, name}) {
   return assocIn(
     map,
     [di, dj, 'units', 'Villager'],
-    assoc(clj(defaultConfig.Villager), 'rank', rank)
+    assoc(get(defaultConfig, 'Villager'), 'rank', rank)
   );
 }
 
@@ -227,7 +228,7 @@ function newWatchtower(map, [di, dj], [vi, vj], {gold, wood}) {
   return assocIn(
     map,
     [di, dj, 'units', 'Watchtower'],
-    clj(defaultConfig.Watchtower)
+    get(defaultConfig, 'Watchtower')
   );
 }
 
@@ -257,7 +258,7 @@ function combineVillagers(map, [di, dj], [ui, uj]) {
   return assocIn(
     map,
     [di, dj, 'units', 'Villager'],
-    assoc(clj(defaultConfig.Villager), 'rank', actualRank)
+    assoc(get(defaultConfig, 'Villager'), 'rank', actualRank)
   );
 }
 
@@ -266,7 +267,7 @@ function build(map, [i, j], {name, cooldown}) {
     return map;
   }
 
-  map = assocIn(map, [i, j, 'units', name], clj(defaultConfig[name]));
+  map = assocIn(map, [i, j, 'units', name], get(defaultConfig, 'name'));
   return assocIn(map, [i, j, 'units', 'Villager', 'cooldown'], cooldown);
 }
 
@@ -443,7 +444,6 @@ function joinLands(map, [di, dj], [ui, uj]) {
         return map;
       }
 
-      // TODO: [i, j, ...vGold]
       var gold = getIn(map, [i, j, 'units', 'Village', 'gold']);
       var wood = getIn(map, [i, j, 'units', 'Village', 'wood']);
 
@@ -480,7 +480,7 @@ function clearDeadRegions(map) {
       return updateMap(map, region, cell => {
         if (getIn(cell, ['units', 'Village'])) {
           cell = dissocIn(cell, ['units', 'Village']);
-          cell = assocIn(cell, ['units', 'Tree'], clj(defaultConfig.Tree));
+          cell = assocIn(cell, ['units', 'Tree'], get(defaultConfig, 'Tree'));
         }
         return assoc(cell, 'color', 'Gray');
       });
@@ -496,15 +496,14 @@ function clearDeadRegions(map) {
     // on tile (might be sea, might have conflicting units, etc.)
     let randCoords = js(randNth(region));
     return assocIn(map, [...randCoords, 'units'], M.hashMap(
-      'Village', clj(defaultConfig.Village),
-      'Grass', clj(defaultConfig.Grass)
+      'Village', get(defaultConfig, 'Village'),
+      'Grass', get(defaultConfig, 'Grass')
     ));
   }, map, regions);
 }
 
 // peasant cultivateMeadow, enemy disconnects territory, meadow gray, never
 // matures
-// TODO: use after invasion cuts off land
 function killGrayMeadowCooldowns(map) {
   return updateMap(
     map,
@@ -1035,7 +1034,7 @@ var App = React.createClass({
     var map = this.state.map;
     var grassConfig = clj({
       units: {
-        Grass: defaultConfig.Grass,
+        Grass: js(get(defaultConfig, 'Grass')),
       },
       color: 'Gray',
     });
