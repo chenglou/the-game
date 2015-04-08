@@ -11,7 +11,6 @@ function arr2D(f, width, height) {
       res[i][j] = f();
     }
   }
-
   return res;
 }
 
@@ -21,10 +20,10 @@ function findPath(map, [si, sj], [ei, ej]) {
   var H = setupHeuristic(map, [si, sj], [ei, ej]);
   var closed = M.set();
   // priority queue
-  var open = M.sortedSetBy(v => {
-    var i = M.nth(v, 0);
-    var j = M.nth(v, 1);
-    return H[i][j] + C[i][j];
+  var open = M.sortedSetBy((a, b) => {
+    let [ai, aj] = M.toJs(a);
+    let [bi, bj] = M.toJs(b);
+    return (H[ai][aj] + C[ai][aj]) - (H[bi][bj] + C[bi][bj]);
   }, M.vector(si, sj));
 
   let height = M.count(map);
@@ -44,11 +43,6 @@ function findPath(map, [si, sj], [ei, ej]) {
     var ci = M.nth(cur, 0);
     var cj = M.nth(cur, 1);
 
-    // check if it's goal
-    if (H[ci][cj] === 0) {
-      break;
-    }
-
     closed = M.conj(closed, cur);
 
     var curNeighbors =
@@ -60,20 +54,23 @@ function findPath(map, [si, sj], [ei, ej]) {
       var cost = C[ci][cj] + 1;
 
       if (M.get(open, v) && cost < C[i][j]) {
-        // TODO: get doesn't work
-        throw 'asd';
+        // should never happen
         open = M.disj(open, v);
       }
-      if (M.get(closed, v) && cost < C[i][j]) {
-        closed = M.disj(closed, v);
+      if (M.get(closed, v)) {
+        if (cost < C[i][j]) {
+          closed = M.disj(closed, v);
+        }
       }
-      if (!M.get(open, v) && !M.get(closed, v)) {
-        C[i][j] = cost;
-        open = M.conj(open, v);
+      if (!M.get(open, v)) {
+        if (cost < C[i][j]) {
+          C[i][j] = cost;
+          // TODO: set parent edge
+          parentEdges[i][j][0] = ci;
+          parentEdges[i][j][1] = cj;
 
-        // TODO: set parent edge
-        parentEdges[i][j][0] = ci;
-        parentEdges[i][j][1] = cj;
+          open = M.conj(open, v);
+        }
       }
     });
   }
@@ -129,21 +126,8 @@ function rand() {
       res[i][j] = Math.random() > .5 ? 1 : 0;
     }
   }
-
   return res;
 }
-
-console.log(JSON.stringify(
-  findPath(
-    M.toClj([[0, 0, 1, 0],[0, 0, 1, 0],[0, 1, 0, 0]]), [0, 0], [2, 3]
-  )
-));
-
-console.log(JSON.stringify(
-  findPath(
-    M.toClj([[0, 1, 0, 0],[0, 0, 0, 0],[0, 1, 0, 0]]), [0, 0], [2, 3]
-  )
-));
 
 console.log(JSON.stringify(
   findPath(
@@ -153,10 +137,6 @@ console.log(JSON.stringify(
   )
 ));
 
-for (var i = 0; i < 99; i++) {
-
-    // findPath(M.toClj(rand()), [0, 0], [2, 3]);
-}
 
 module.exports = findPath;
 
