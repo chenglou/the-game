@@ -5,6 +5,9 @@ var findNeighbors = require('./findNeighbors');
 var arr2D = require('./utils/arr2D');
 
 function findPath(map, [si, sj], [ei, ej]) {
+  if (M.getIn(map, [ei, ej]) === 1) {
+    return [];
+  }
   // map is a 2D arrays of 0 and 1. 1 means obstacles.
   // start is [x, y] coordinates. Same for end
   var H = setupHeuristic(map, [si, sj], [ei, ej]);
@@ -108,24 +111,24 @@ function setupHeuristic(map, start, [ei, ej]) {
   return heuristic;
 }
 
-function rand() {
-  let res = [];
-  for (let i = 0; i < 20; i++) {
-    res.push([]);
-    for (let j = 0; j < 30; j++) {
-      res[i][j] = Math.random() > .5 ? 1 : 0;
-    }
-  }
-  return res;
-}
+// function rand() {
+//   let res = [];
+//   for (let i = 0; i < 20; i++) {
+//     res.push([]);
+//     for (let j = 0; j < 30; j++) {
+//       res[i][j] = Math.random() > .5 ? 1 : 0;
+//     }
+//   }
+//   return res;
+// }
 
-console.log(JSON.stringify(
-  findPath(
-    M.toClj(
-      [[0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 1, 1, 0, 1, 1, 0, 0], [0, 0, 1, 1, 1, 1, 1, 1, 0], [0, 0, 1, 1, 1, 1, 1, 0, 0], [0, 0, 0, 1, 1, 1, 1, 0, 0], [0, 0, 0, 1, 1, 1, 0, 0, 0], [0, 0, 0, 0, 1, 1, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0]]
-    ), [0, 4], [9, 4]
-  )
-));
+// console.log(JSON.stringify(
+//   findPath(
+//     M.toClj(
+//       [[0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 1, 1, 0, 1, 1, 0, 0], [0, 0, 1, 1, 1, 1, 1, 1, 0], [0, 0, 1, 1, 1, 1, 1, 0, 0], [0, 0, 0, 1, 1, 1, 1, 0, 0], [0, 0, 0, 1, 1, 1, 0, 0, 0], [0, 0, 0, 0, 1, 1, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0]]
+//     ), [0, 4], [9, 4]
+//   )
+// ));
 
 module.exports = findPath;
 
