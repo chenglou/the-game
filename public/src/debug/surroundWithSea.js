@@ -5,7 +5,7 @@ var butLast = require('../utils/butLast');
 function surroundWithSea(map) {
   var seaTileConfig = M.toClj({
     units: {
-      Sea: everyUnitDefaultConfigDebug.Sea,
+      Sea: M.toJs(M.get(everyUnitDefaultConfigDebug, 'Sea')),
     },
     color: 'Gray',
   });

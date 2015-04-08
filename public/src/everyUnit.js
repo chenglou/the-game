@@ -1,15 +1,6 @@
-var comp = {
-  Village: require('./units/Village'),
-  Villager: require('./units/Villager'),
-  Grass: require('./units/Grass'),
-  Meadow: require('./units/Meadow'),
-  Road: require('./units/Road'),
-  Sea: require('./units/Sea'),
-  Tombstone: require('./units/Tombstone'),
-  Tree: require('./units/Tree'),
-  Watchtower: require('./units/Watchtower'),
-  Cannon: require('./units/Cannon'),
-};
+'use strict';
+
+var M = require('mori');
 
 var nameInDisplayOrder = {
   Grass: 1,
@@ -27,8 +18,7 @@ var nameInDisplayOrder = {
   Cannon: 7,
 };
 
-// TODO: convert to mori
-var defaultConfig = {
+var defaultConfig = M.toClj({
   Grass: {},
   Sea: {},
   Village: {gold: 7, wood: 0, rank: 0, hp: 1},
@@ -39,6 +29,6 @@ var defaultConfig = {
   Tombstone: {},
   Watchtower: {},
   Cannon: {hasMoved: false},
-};
+});
 
-module.exports = {nameInDisplayOrder, comp, defaultConfig};
+module.exports = {nameInDisplayOrder, defaultConfig};
