@@ -6,10 +6,8 @@ var Tile = require('../Tile');
 var M = require('mori');
 var everyUnit = require('../everyUnit');
 var units = require('../units');
-var overlayBlue = require('../overlayBlue.png');
-var overlayRed = require('../overlayRed.png');
-var overlayActive = require('../overlayActive.png');
 var assetDims = require('../assetDims');
+var {overlay} = require('../assetUrls');
 var url = require('../utils/imgUrl');
 
 var p = React.PropTypes;
@@ -20,13 +18,24 @@ function orderUnitsForDisplay(unitNames) {
   return M.sort((a, b) => nameInDisplayOrder[a] - nameInDisplayOrder[b], unitNames);
 }
 
-function getOverlayStyle(bg, isFocus, isActiveTurn) {
+function getOverlayStyle(bg, color, isFocus, isActiveTurn) {
   var [w, h] = assetDims.overlay;
+
+  let hue = {
+    // original overlay is blue
+    Blue: 0,
+    Red: 90,
+    Orange: 190,
+    Purple: 50,
+  };
+
+  let filter = `hue-rotate(${hue[color]}deg)` + (isFocus ? ' brightness(1.7) ' : '');
 
   return {
     backgroundImage: bg,
     backgroundRepeat: 'no-repeat',
     opacity: isFocus || isActiveTurn ? 1 : 0.5,
+    WebkitFilter: filter,
     top: -4,
     zIndex: isFocus ? 100 : 99,
     width: w,
@@ -73,15 +82,13 @@ var Grid = React.createClass({
         }, orderedUnits);
 
         var color = M.get(cell, 'color');
-        var overlay = color === 'Blue' ? url(overlayBlue)
-          : color === 'Red' ? url(overlayRed)
-          : 'none';
+        let overlayUrl = color === 'Gray' ? null : url(overlay);
 
         var maybeActiveOverlay;
         if (i === hover[0] && j === hover[1]) {
           maybeActiveOverlay =
             <div
-              style={getOverlayStyle(url(overlayActive), true, false)}>
+              style={getOverlayStyle(url(overlay), 'Orange', true, false)}>
             </div>;
         }
 
@@ -92,7 +99,7 @@ var Grid = React.createClass({
             onMouseDown={onTileMouseDown.bind(null, i, j)}
             onMouseEnter={onTileHover.bind(null, i, j)}>
               {js(unitComponents)}
-              <div style={getOverlayStyle(overlay, false, turn === color)}></div>
+              <div style={getOverlayStyle(overlayUrl, color, false, turn === color)}></div>
               {maybeActiveOverlay}
               {false && i + ',' + j}
           </Tile>
