@@ -4,7 +4,8 @@ let newPeasant = ['New Peasant', 'newVillager', {gold: 10, wood: 0, name: 'Peasa
 let newInfantry = ['New Infantry', 'newVillager', {gold: 20, wood: 0, name: 'Infantry'}];
 let newSoldier = ['New Soldier', 'newVillager', {gold: 30, wood: 0, name: 'Soldier'}];
 let newKnight = ['New Knight', 'newVillager', {gold: 40, wood: 0, name: 'Knight'}];
-let newWatchtower = ['New Watchtower', 'newWatchtower', {gold: 0, wood: 5, name: 'Watchtower'}];
+let newWatchtower = ['New Watchtower', 'newWatchtower', {gold: 0, wood: 5}];
+let newCannon = ['New Cannon', 'newCannon', {gold: 35, wood: 12}];
 let combine = ['Combine', 'combineVillagers', {}];
 
 let pendingActions = {
@@ -27,9 +28,10 @@ let pendingActions = {
       newSoldier,
       newKnight,
       newWatchtower,
+      newCannon,
       ['Upgrade to Castle', 'upgradeVillage', {gold: 0, wood: 12, nextName: 'Castle'}],
     ],
-    Castle: [newPeasant, newInfantry, newSoldier, newKnight, newWatchtower],
+    Castle: [newPeasant, newInfantry, newSoldier, newKnight, newWatchtower, newCannon],
   },
 
   Villager: {

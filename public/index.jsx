@@ -25,7 +25,6 @@ var updateMap = require('./src/updateMap');
 var getMenuItems = require('./src/getMenuItems');
 var pathFinding = require('./src/pathFinding');
 var map1 = require('./src/map/data/map1');
-var pathFind = require('./src/pathFinding');
 let js = M.toJs;
 let clj = M.toClj;
 let {getIn, get, assoc, assocIn, updateIn} = M;
@@ -229,6 +228,23 @@ function newWatchtower(map, [di, dj], [vi, vj], {gold, wood}) {
     map,
     [di, dj, 'units', 'Watchtower'],
     get(defaultConfig, 'Watchtower')
+  );
+}
+
+function newCannon(map, [di, dj], [vi, vj], {gold, wood}) {
+  let aroundVillage =
+    findNeighbors(map, vi, vj).some(([i, j]) => i === di && j === dj);
+  if (!aroundVillage || hasConflict(map, 'Cannon', di, dj)) {
+    return map;
+  }
+
+  map = updateIn(map, [vi, vj, 'units', 'Village', 'gold'], add(-gold));
+  map = updateIn(map, [vi, vj, 'units', 'Village', 'wood'], add(-wood));
+
+  return assocIn(
+    map,
+    [di, dj, 'units', 'Cannon'],
+    get(defaultConfig, 'Cannon')
   );
 }
 
@@ -983,6 +999,8 @@ var App = React.createClass({
       newMap = move(map, [i, j], selectedCoords, rest);
     } else if (action === 'newWatchtower') {
       newMap = newWatchtower(map, [i, j], selectedCoords, rest);
+    } else if (action === 'newCannon') {
+      newMap = newCannon(map, [i, j], selectedCoords, rest);
     } else if (action === 'combineVillagers') {
       newMap = combineVillagers(map, [i, j], selectedCoords);
     } else if (action === 'shootCannon') {
