@@ -1,33 +1,42 @@
 'use strict';
 
 var M = require('mori');
-var INF = 10000;
+var findNeighbors = require('./findNeighbors');
 
-function findPath(map, start, end) 
-{
-  // map is a 2D arrays of 0 and 1. 1 means obstacles. 
+function arr2D(f, width, height) {
+  let res = [];
+  for (let i = 0; i < height; i++) {
+    res.push([]);
+    for (let j = 0; j < width; j++) {
+      res[i][j] = f();
+    }
+  }
+
+  return res;
+}
+
+function findPath(map, [si, sj], [ei, ej]) {
+  // map is a 2D arrays of 0 and 1. 1 means obstacles.
   // start is [x, y] coordinates. Same for end
-  var H = setupHeuristic(map, start, end);
+  var H = setupHeuristic(map, [si, sj], [ei, ej]);
   var closed = M.set();
   // priority queue
-  var open = M.list(M.vector(start[0], start[1]));
+  var open = M.sortedSetBy(v => {
+    var i = M.nth(v, 0);
+    var j = M.nth(v, 1);
+    return H[i][j] + C[i][j];
+  }, M.vector(si, sj));
 
-  //var parentEdges = M.intoArray(M.map((a) => { return M.map((b) => {return [-1, -1];}, M.range(map[0].length));}, M.range(map.length)));
-  var f = (a) => {return M.map(M.constantly(-1), M.range(2));}
-  var parentEdges = M.toJs(M.map((a) => {return M.map(f, M.range(map[0].length));}, M.range(map.length)));
-  
+  let height = M.count(map);
+  let width = M.count(M.first(map));
+  var parentEdges = arr2D(() => [-1, -1], width, height);
+
   // set up cost function
-  var C = M.toJs(M.map((a) => { return M.map(M.constantly(INF), M.range(map[0].length));}, M.range(map.length)));
-  C[start[0]][start[1]] = 0;
+  var C = arr2D(() => 9999, width, height);
 
-  while (!M.isEmpty(open)) 
-  {
-    open = M.sortBy((v) => {
-      var i = M.nth(v, 0);
-      var j = M.nth(v, 1);
-      return H[i][j] + C[i][j];
-    }, open);
+  C[si][sj] = 0;
 
+  while (!M.isEmpty(open)) {
     // remove lowest rank from open
     var cur = M.first(open);
     open = M.rest(open);
@@ -36,26 +45,32 @@ function findPath(map, start, end)
     var cj = M.nth(cur, 1);
 
     // check if it's goal
-    if (H[ci][cj] === 0)
+    if (H[ci][cj] === 0) {
       break;
-    
+    }
+
     closed = M.conj(closed, cur);
 
-    var curNeighbors = findNeighbours(map, ci, cj)
-      .filter(([i, j]) => H[i][j] !== -1);
+    var curNeighbors =
+      findNeighbors(map, ci, cj).filter(([i, j]) => H[i][j] !== -1);
 
     // set up cost
     curNeighbors.forEach(([i, j]) => {
-      var cost = C[ci][cj] + 1; 
-      if (M.get(open, M.vector(i, j)) && cost < C[i][j])
-        open = M.disj(open, M.vector(i, j));
-      if (M.get(closed, M.vector(i, j)) && cost < C[i][j])
-        closed = M.disj(closed, M.vector(i, j));
-      if (!M.get(open, M.vector(i, j)) && !M.get(closed, M.vector(i, j)))
-      {
+      let v = M.vector(i, j);
+      var cost = C[ci][cj] + 1;
+
+      if (M.get(open, v) && cost < C[i][j]) {
+        // TODO: get doesn't work
+        throw 'asd';
+        open = M.disj(open, v);
+      }
+      if (M.get(closed, v) && cost < C[i][j]) {
+        closed = M.disj(closed, v);
+      }
+      if (!M.get(open, v) && !M.get(closed, v)) {
         C[i][j] = cost;
-        open = M.conj(open, M.vector(i, j));
-        
+        open = M.conj(open, v);
+
         // TODO: set parent edge
         parentEdges[i][j][0] = ci;
         parentEdges[i][j][1] = cj;
@@ -63,65 +78,86 @@ function findPath(map, start, end)
     });
   }
   // TODO: traverse parent edges from goal
-  if (parentEdges[end[0]][end[1]][0] === -1)
+  if (parentEdges[ei][ej][0] === -1) {
     return [];
+  }
 
-  var curNode = end;
+  var currNode = [ei, ej];
   var path = [];
-  
-  while (!(curNode[0] === start[0] && curNode[1] === start[1]))
-  {
-    path.unshift([curNode[0], curNode[1]]);
-    curNode = parentEdges[curNode[0]][curNode[1]];
+
+  while (!(currNode[0] === si && currNode[1] === sj)) {
+    path.unshift([currNode[0], currNode[1]]);
+    currNode = parentEdges[currNode[0]][currNode[1]];
   }
   // adding start point to the front of the path
-  path.unshift(start);
+  path.unshift([si, sj]);
   return path;
 }
 
-function setupHeuristic(map, start, end)
-{
-  // initialize a 2D array of -1 
-  var f = (a) => {return M.map(M.constantly(-1), M.range(map[0].length));}
-  var heuristic = M.toJs(M.map(f, M.range(map.length)));
-  heuristic[end[0]][end[1]] = 0;
-  
-  var visited = M.set();
-  var toVisit = [[end[0], end[1]]];
-  visited = M.conj(visited, M.vector(end[0], end[1]));
+function setupHeuristic(map, start, [ei, ej]) {
+  // initialize a 2D array of -1
+  let height = M.count(map);
+  let width = M.count(M.first(map));
+  let heuristic = arr2D(() => -1, width, height);
+  heuristic[ei][ej] = 0;
+
+  let visited = M.set();
+  let toVisit = [[ei, ej]];
+  visited = M.conj(visited, M.vector(ei, ej));
 
   // start with end point, and slowly expand regions
-  while(toVisit.length > 0)
-  {
-    var cur = toVisit.pop();
-    var unvisitedNeighbors = findNeighbours(map, cur[0], cur[1])
-      .filter(([i, j]) => map[i][j] === 0)
+  while(toVisit.length > 0) {
+    let [ci, cj] = toVisit.pop();
+    let unvisitedNeighbors = findNeighbors(map, ci, cj)
+      .filter(([i, j]) => M.getIn(map, [i, j]) === 0)
       .filter(([i, j]) => !M.get(visited, M.vector(i, j)));
 
     unvisitedNeighbors.forEach(([i, j]) => {
       visited = M.conj(visited, M.vector(i, j));
-      heuristic[i][j] = heuristic[cur[0]][cur[1]] + 1;
+      heuristic[i][j] = heuristic[ci][cj] + 1;
       toVisit.push([i, j]);
     });
   }
   return heuristic;
 }
 
-function findNeighbours(map, i, j) 
-{
-  var oddI = i % 2 === 1;
+function rand() {
+  let res = [];
+  for (let i = 0; i < 20; i++) {
+    res.push([]);
+    for (let j = 0; j < 30; j++) {
+      res[i][j] = Math.random() > .5 ? 1 : 0;
+    }
+  }
 
-  var topLeft = [i - 1, oddI ? j : j - 1];
-  var topRight = [i - 1, oddI ? j + 1 : j];
-  var left = [i, j - 1];
-  var right = [i, j + 1];
-  var bottomLeft = [i + 1, oddI ? j : j - 1];
-  var bottomRight = [i + 1, oddI ? j + 1 : j];
-
-  return [topLeft, topRight, left, right, bottomLeft, bottomRight]
-    .filter(([i ,j]) => i >=0 && i < map.length && j >= 0 && j < map[i].length);
+  return res;
 }
-console.log(findPath([[0, 1, 0, 0],[0, 0, 0, 0],[0, 1, 0, 0]], [0, 0], [2, 3]));
+
+console.log(JSON.stringify(
+  findPath(
+    M.toClj([[0, 0, 1, 0],[0, 0, 1, 0],[0, 1, 0, 0]]), [0, 0], [2, 3]
+  )
+));
+
+console.log(JSON.stringify(
+  findPath(
+    M.toClj([[0, 1, 0, 0],[0, 0, 0, 0],[0, 1, 0, 0]]), [0, 0], [2, 3]
+  )
+));
+
+console.log(JSON.stringify(
+  findPath(
+    M.toClj(
+      [[0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 1, 1, 0, 1, 1, 0, 0], [0, 0, 1, 1, 1, 1, 1, 1, 0], [0, 0, 1, 1, 1, 1, 1, 0, 0], [0, 0, 0, 1, 1, 1, 1, 0, 0], [0, 0, 0, 1, 1, 1, 0, 0, 0], [0, 0, 0, 0, 1, 1, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0]]
+    ), [0, 4], [9, 4]
+  )
+));
+
+for (var i = 0; i < 99; i++) {
+
+    // findPath(M.toClj(rand()), [0, 0], [2, 3]);
+}
+
 module.exports = findPath;
 
 
