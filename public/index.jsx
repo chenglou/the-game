@@ -24,7 +24,7 @@ var canMoveToAura = require('./src/canMoveToAura');
 var updateMap = require('./src/updateMap');
 var getMenuItems = require('./src/getMenuItems');
 var map1 = require('./src/map/data/map1');
-
+var pathFind = require('./src/pathFinding');
 let js = M.toJs;
 let clj = M.toClj;
 let {getIn, get, assoc, assocIn, updateIn} = M;

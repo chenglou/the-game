@@ -62,7 +62,7 @@ function findPath(map, [si, sj], [ei, ej]) {
           closed = M.disj(closed, v);
         }
       }
-      if (!M.get(open, v)) {
+      if (!M.get(open, v) && !M.get(closed, v)) {
         if (cost < C[i][j]) {
           C[i][j] = cost;
           // TODO: set parent edge
