@@ -11,7 +11,7 @@ function findNeighbors(map, i, j) {
   var bottomRight = [i + 1, oddI ? j + 1 : j];
 
   return [topLeft, topRight, left, right, bottomLeft, bottomRight].filter(coords => {
-    return M.getIn(map, coords);
+    return M.getIn(map, coords) != null;
   });
 }
 
