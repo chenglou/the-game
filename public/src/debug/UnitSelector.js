@@ -1,8 +1,9 @@
 'use strict';
 
-var everyUnit = require('../everyUnit');
-var everyUnitDefaultConfigDebug = require('./everyUnitDefaultConfigDebug');
 var React = require('react');
+var everyUnit = require('../everyUnit');
+var units = require('../units');
+var everyUnitDefaultConfigDebug = require('./everyUnitDefaultConfigDebug');
 
 var p = React.PropTypes;
 
@@ -30,7 +31,7 @@ var LandBox = React.createClass({
       color: selected ? 'red' : 'gray',
     };
 
-    let Unit = everyUnit.comp[unitName];
+    let Unit = units[unitName];
 
     return (
       <div {...props} style={s}>

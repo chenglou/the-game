@@ -1,16 +1,3 @@
-var comp = {
-  Village: require('./units/Village'),
-  Villager: require('./units/Villager'),
-  Grass: require('./units/Grass'),
-  Meadow: require('./units/Meadow'),
-  Road: require('./units/Road'),
-  Sea: require('./units/Sea'),
-  Tombstone: require('./units/Tombstone'),
-  Tree: require('./units/Tree'),
-  Watchtower: require('./units/Watchtower'),
-  Cannon: require('./units/Cannon'),
-};
-
 var nameInDisplayOrder = {
   Grass: 1,
   Sea: 1,
@@ -41,4 +28,4 @@ var defaultConfig = {
   Cannon: {hasMoved: false},
 };
 
-module.exports = {nameInDisplayOrder, comp, defaultConfig};
+module.exports = {nameInDisplayOrder, defaultConfig};

@@ -5,6 +5,7 @@ var positioner = require('./positioner');
 var Tile = require('../Tile');
 var M = require('mori');
 var everyUnit = require('../everyUnit');
+var units = require('../units');
 var overlayBlue = require('../overlayBlue.png');
 var overlayRed = require('../overlayRed.png');
 var overlayActive = require('../overlayActive.png');
@@ -58,12 +59,13 @@ var Grid = React.createClass({
 
     var tiles = M.map((row, i) => {
       var cells = M.map((cell, j) => {
-        var units = M.get(cell, 'units');
-        var orderedUnits = orderUnitsForDisplay(M.keys(units));
+        var orderedUnits = orderUnitsForDisplay(
+          M.keys(M.get(cell, 'units'))
+        );
 
         var unitComponents = M.map((unitName) => {
-          var Unit = everyUnit.comp[unitName];
-          var config = M.get(units, unitName);
+          var Unit = units[unitName];
+          var config = M.getIn(cell, ['units', unitName]);
 
           return (
             <Unit key={unitName} {...js(config)}></Unit>
