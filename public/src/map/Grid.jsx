@@ -8,6 +8,7 @@ var everyUnit = require('../everyUnit');
 var units = require('../units');
 var assetDims = require('../assetDims');
 var colorStyle = require('../colorStyle');
+var inCoordsList = require('../inCoordsList');
 var {overlay} = require('../assetUrls');
 var url = require('../utils/imgUrl');
 
@@ -33,10 +34,6 @@ function getOverlayStyle(color, isFocus, isActiveTurn) {
     height: h,
     marginLeft: (positioner.calcW() - w) / 2,
   };
-}
-
-function inCoords(arr, [i, j]) {
-  return arr.some(([i2, j2]) => i === i2 && j === j2);
 }
 
 var Grid = React.createClass({
@@ -89,7 +86,7 @@ var Grid = React.createClass({
         }
 
         let maybeTrailOverlay;
-        if (inCoords(moveTrail, [i, j])) {
+        if (inCoordsList(moveTrail, [i, j])) {
           maybeTrailOverlay =
             <div
               style={getOverlayStyle('BrightYellow', true, false)}>

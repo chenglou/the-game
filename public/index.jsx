@@ -23,6 +23,7 @@ var {findRegion, findRegionM} = require('./src/findRegion');
 var trampleOnMeadow = require('./src/trampleOnMeadow');
 var canMoveToAura = require('./src/canMoveToAura');
 var updateMap = require('./src/updateMap');
+var inCoordsList = require('./src/inCoordsList');
 var getMenuItems = require('./src/getMenuItems');
 var aStar = require('./src/aStar');
 var map1 = require('./src/map/data/map1');
@@ -45,11 +46,6 @@ function getUnitsByColorAndName(map, turn, unitName) {
     ([i, j]) => getIn(map, [i, j, 'color']) === turn,
     getUnitsByName(map, unitName)
   );
-}
-
-function coordsInRegion(map, [i, j], [ti, tj]) {
-  // ti, tj is the test coords. i, j actually in region
-  return findRegion(map, i, j).some(([i2, j2]) => ti === i2 && tj === j2);
 }
 
 // ----------- phases
@@ -197,7 +193,7 @@ function payOrDie(map, turn) {
 // -------------------------- phases over
 
 function newVillager(map, [di, dj], [vi, vj], {gold, name}) {
-  if (!coordsInRegion(map, [vi, vj], [di, dj]) ||
+  if (!inCoordsList(findRegion(map, vi, vj), [di, dj]) ||
       hasConflict(map, 'Villager', di, dj)) {
     return map;
   }
@@ -217,7 +213,7 @@ function newVillager(map, [di, dj], [vi, vj], {gold, name}) {
 }
 
 function newWatchtower(map, [di, dj], [vi, vj], {gold, wood}) {
-  if (!coordsInRegion(map, [vi, vj], [di, dj]) ||
+  if (!inCoordsList(findRegion(map, vi, vj), [di, dj]) ||
       hasConflict(map, 'Watchtower', di, dj)) {
     return map;
   }
@@ -233,9 +229,9 @@ function newWatchtower(map, [di, dj], [vi, vj], {gold, wood}) {
 }
 
 function newCannon(map, [di, dj], [vi, vj], {gold, wood}) {
-  let aroundVillage =
-    findNeighbors(map, vi, vj).some(([i, j]) => i === di && j === dj);
-  if (!aroundVillage || hasConflict(map, 'Cannon', di, dj)) {
+  if (!inCoordsList(findNeighbors(map, vi, vj), [di, dj]) ||
+    !inCoordsList(findRegion(map, vi, vj), [di, dj]) ||
+    hasConflict(map, 'Cannon', di, dj)) {
     return map;
   }
 
@@ -250,7 +246,7 @@ function newCannon(map, [di, dj], [vi, vj], {gold, wood}) {
 }
 
 function combineVillagers(map, [di, dj], [ui, uj]) {
-  if (!coordsInRegion(map, [ui, uj], [di, dj]) ||
+  if (!inCoordsList(findRegion(map, ui, uj), [di, dj]) ||
       !getIn(map, [di, dj, 'units', 'Villager'])) {
     return map;
   }
@@ -321,7 +317,7 @@ function checkCannonMovingToNeighbors(map, [di, dj], [ui, uj]) {
   return movingToNeighbor ? map : null;
 }
 
-function isEnemyColor(map, [oi, oj], [di, dj]) {
+function isEnemyColor(map, [di, dj], [oi, oj]) {
   let ownColor = getIn(map, [oi, oj, 'color']);
   let destColor = getIn(map, [di, dj, 'color']);
   return destColor !== 'Gray' && ownColor !== destColor;
@@ -336,7 +332,7 @@ function findPath(map, [di, dj], [ui, uj], typeName, canInvade) {
   let region = findRegion(map, ui, uj);
 
   if (destColor === 'Gray' ||
-    (canInvade && isEnemyColor(map, [ui, uj], [di, dj]))) {
+    (canInvade && isEnemyColor(map, [di, dj], [ui, uj]))) {
     region.push([di, dj]);
   }
 
@@ -359,24 +355,16 @@ function checkVillagerMovingToGoodTile(map, [di, dj], [ui, uj]) {
   return path.length === 0 ? null : map;
 }
 
-// peasant, cannon
-// TODO: peasant don't use this
-function checkCantInvade(map, [di, dj], [ui, uj]) {
-  var destColor = getIn(map, [di, dj, 'color']);
-  var ownColor = getIn(map, [ui, uj, 'color']);
-  var isEnemyColor = destColor !== 'Gray' && destColor !== ownColor;
-
-  return isEnemyColor ? null : map;
+// cannon
+function checkCantInvade(map, dest, selected) {
+  return isEnemyColor(map, dest, selected) ? null : map;
 }
 
 // can't invade protected tiles of higher rank
 function checkNeighborsAura(map, [di, dj], [ui, uj], name) {
   var destColor = getIn(map, [di, dj, 'color']);
-  var ownColor = getIn(map, [ui, uj, 'color']);
-
   // if enemy tile, check aura, might have many auras
-  if (destColor !== ownColor &&
-      destColor !== 'Gray' &&
+  if (isEnemyColor(map, [di, dj], [ui, uj]) &&
       !canMoveToAura(map, name, destColor, [di, dj])) {
     return null;
   }
@@ -430,32 +418,30 @@ function stopCannon(map, [di, dj], [ui, uj]) {
 }
 
 function kill(map, [di, dj], [ui, uj], name) {
-  let destColor = getIn(map, [di, dj, 'color']);
-  let ownColor = getIn(map, [ui, uj, 'color']);
-
-  if (destColor !== ownColor && destColor !== 'Gray') {
-    let units = getIn(map, [di, dj, 'units']);
-    let canAttack = M.every(a => {
-      let enemyName = M.first(a);
-      let config = M.second(a);
-      if (!rankers.killable[enemyName]) {
-        return true;
-      }
-      let rank = get(config, 'rank');
-      let enemyPreciseName = enemyName === 'Villager' ? rankers.villagerByRank[rank]
-        : enemyName === 'Village' ? rankers.villageByRank[rank]
-        : enemyName;
-
-      return rankers.canAttack[name][enemyPreciseName];
-    }, units);
-
-    if (!canAttack) {
-      return null;
-    }
-
-    map = dissocIn(map, [di, dj, 'units', 'Village']);
-    map = dissocIn(map, [di, dj, 'units', 'Villager']);
+  if (!isEnemyColor(map, [di, dj], [ui, uj])) {
+    return null;
   }
+
+  let canAttack = M.every(a => {
+    let enemyName = M.first(a);
+    let config = M.second(a);
+    if (!rankers.killable[enemyName]) {
+      return true;
+    }
+    let rank = get(config, 'rank');
+    let enemyPreciseName = enemyName === 'Villager' ? rankers.villagerByRank[rank]
+      : enemyName === 'Village' ? rankers.villageByRank[rank]
+      : enemyName;
+
+    return rankers.canAttack[name][enemyPreciseName];
+  }, getIn(map, [di, dj, 'units']));
+
+  if (!canAttack) {
+    return null;
+  }
+
+  map = dissocIn(map, [di, dj, 'units', 'Village']);
+  map = dissocIn(map, [di, dj, 'units', 'Villager']);
 
   return map;
 }
@@ -689,10 +675,8 @@ function shootCannon(map, [di, dj], [ui, uj], {gold, wood}) {
       clj(findNeighbors(map, ui, uj).map(([i, j]) => findNeighbors(map, i, j)))
     )
   );
-  area = js(area);
 
-  let clickedInArea = area.some(([i, j]) => i === di && j === dj);
-  if (!clickedInArea) {
+  if (!inCoordsList(js(area), [di, dj])) {
     return map;
   }
 
