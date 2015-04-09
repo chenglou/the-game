@@ -42,6 +42,12 @@ let canInvade = {
   Knight: true,
 };
 
+let trample = {
+  Soldier: true,
+  Knight: true,
+  Cannon: true,
+};
+
 let hasAura = {
   Villager: true,
   Village: true,
@@ -74,4 +80,5 @@ module.exports = {
   killable,
   villageUpgradeHp,
   canInvade,
+  trample,
 };

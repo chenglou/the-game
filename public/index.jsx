@@ -197,9 +197,8 @@ function newVillager(map, [di, dj], [vi, vj], {gold, name}) {
       hasConflict(map, 'Villager', di, dj)) {
     return map;
   }
-
-  if (name === 'Knight' || name === 'Soldier') {
-    map = trampleOnMeadow(map, name, [di, dj]);
+  if (rankers.trample[name]) {
+    map = trampleOnMeadow(map, [di, dj]);
   }
 
   map = updateIn(map, [vi, vj, 'units', 'Village', 'gold'], add(-gold));
@@ -233,6 +232,9 @@ function newCannon(map, [di, dj], [vi, vj], {gold, wood}) {
     !inCoordsList(findRegion(map, vi, vj), [di, dj]) ||
     hasConflict(map, 'Cannon', di, dj)) {
     return map;
+  }
+  if (rankers.trample[name]) {
+    map = trampleOnMeadow(map, [di, dj]);
   }
 
   map = updateIn(map, [vi, vj, 'units', 'Village', 'gold'], add(-gold));
@@ -310,12 +312,90 @@ function findAllRegions(map) {
 
 // move =======
 
-function checkCannonMovingToNeighbors(map, [di, dj], [ui, uj]) {
-  var movingToNeighbor =
-    findNeighbors(map, ui, uj).some(([i, j]) => i === di && j === dj);
+function genericMovePath(map, [di, dj], [ui, uj], name) {
+  let destColor = getIn(map, [di, dj, 'color']);
+  let ownColor = getIn(map, [ui, uj, 'color']);
 
-  return movingToNeighbor ? map : null;
+  if (destColor === 'Gray') {
+    map = assocIn(map, [di, dj, 'color'], ownColor);
+  }
+  if (isEnemyColor(map, [di, dj], [ui, uj]) &&
+    canMoveToAura(map, name, destColor, [di, dj]) &&
+    canDefeat(map, [di, dj], name)) {
+    map = kill(map, [di, dj], [ui, uj]);
+    map = assocIn(map, [di, dj, 'color'], ownColor);
+  }
+
+  return findPath(map, [di, dj], [ui, uj]);
 }
+
+let findMovePath = {
+  Peasant: (map, [di, dj], [ui, uj]) => {
+    map = cleanTreeAndTombstone(map, [di, dj], [ui, uj]);
+
+    let destColor = getIn(map, [di, dj, 'color']);
+    let ownColor = getIn(map, [ui, uj, 'color']);
+    if (destColor === 'Gray') {
+      map = assocIn(map, [di, dj, 'color'], ownColor);
+    }
+
+    if (hasConflict(map, 'Villager', di, dj) ||
+      isEnemyColor(map, [di, dj], [ui, uj])) {
+      return [];
+    }
+
+    return findPath(map, [di, dj], [ui, uj]);
+  },
+
+  Infantry: (map, [di, dj], [ui, uj]) => {
+    map = cleanTreeAndTombstone(map, [di, dj], [ui, uj]);
+    return genericMovePath(map, [di, dj], [ui, uj], 'Infantry');
+  },
+
+  Soldier: (map, [di, dj], [ui, uj]) => {
+    map = cleanTreeAndTombstone(map, [di, dj], [ui, uj]);
+    return genericMovePath(map, [di, dj], [ui, uj], 'Soldier');
+  },
+
+  Knight: (map, [di, dj], [ui, uj]) => {
+    return genericMovePath(map, [di, dj], [ui, uj], 'Knight');
+  },
+
+  Cannon: (map, [di, dj], [ui, uj]) => {
+    if (hasConflict(map, 'Cannon', di, dj) ||
+      !inCoordsList(findNeighbors(map, ui, uj), [di, dj]) ||
+      isEnemyColor(map, [di, dj], [ui, uj]) ||
+      hasTreeOrTombstone(map, [di, dj])) {
+      return [];
+    }
+
+    return [[ui, uj], [di, dj]];
+  },
+};
+
+function hasTreeOrTombstone(map, [di, dj]) {
+  return getIn(map, [di, dj, 'units', 'Tree']) ||
+    getIn(map, [di, dj, 'units', 'Tombstone']);
+}
+
+// doesn't assume friend/foe (color) on dest tile
+function canDefeat(map, [di, dj], name) {
+  return M.every(a => {
+    let enemyName = M.first(a);
+    let config = M.second(a);
+    if (!rankers.killable[enemyName]) {
+      return true;
+    }
+    let rank = get(config, 'rank');
+    let enemyPreciseName = enemyName === 'Villager' ? rankers.villagerByRank[rank]
+      : enemyName === 'Village' ? rankers.villageByRank[rank]
+      : enemyName;
+
+    return rankers.canAttack[name][enemyPreciseName];
+  }, getIn(map, [di, dj, 'units']));
+}
+
+//  move----------===================
 
 function isEnemyColor(map, [di, dj], [oi, oj]) {
   let ownColor = getIn(map, [oi, oj, 'color']);
@@ -323,21 +403,15 @@ function isEnemyColor(map, [di, dj], [oi, oj]) {
   return destColor !== 'Gray' && ownColor !== destColor;
 }
 
-// TODO: can't touch tree
-function findPath(map, [di, dj], [ui, uj], typeName, canInvade) {
+function findPath(map, [di, dj], [ui, uj]) {
   // check actions.js signature for move
   let height = M.count(map);
   let width = M.count(M.first(map));
-  let destColor = getIn(map, [di, dj, 'color']);
   let region = findRegion(map, ui, uj);
 
-  if (destColor === 'Gray' ||
-    (canInvade && isEnemyColor(map, [di, dj], [ui, uj]))) {
-    region.push([di, dj]);
-  }
-
   let coordsMap = region.reduce((coordsMap, [i, j]) => {
-    if (hasConflict(map, typeName, i, j)) {
+    // doesn't check color and all. assume pre-checked
+    if (hasConflict(map, 'Villager', i, j)) {
       return coordsMap;
     }
     coordsMap[i][j] = 0;
@@ -347,47 +421,12 @@ function findPath(map, [di, dj], [ui, uj], typeName, canInvade) {
   return aStar(clj(coordsMap), [ui, uj], [di, dj]);
 }
 
-// assume function reserved for Villager for now
-function checkVillagerMovingToGoodTile(map, [di, dj], [ui, uj]) {
-  let rank = M.getIn(map, [ui, uj, 'units', 'Villager', 'rank']);
-  let canInvade = rankers.canInvade[rankers.villagerByRank[rank]];
-  let path = findPath(map, [di, dj], [ui, uj], 'Villager', canInvade);
-  return path.length === 0 ? null : map;
-}
-
-// cannon
-function checkCantInvade(map, dest, selected) {
-  return isEnemyColor(map, dest, selected) ? null : map;
-}
-
-// can't invade protected tiles of higher rank
-function checkNeighborsAura(map, [di, dj], [ui, uj], name) {
-  var destColor = getIn(map, [di, dj, 'color']);
-  // if enemy tile, check aura, might have many auras
-  if (isEnemyColor(map, [di, dj], [ui, uj]) &&
-      !canMoveToAura(map, name, destColor, [di, dj])) {
-    return null;
-  }
-
-  return map;
-}
-
-function checkConflict(name) {
-  return function(map, [di, dj]) {
-    return hasConflict(map, name, di, dj) ? null : map;
-  };
-}
-
 function stopVillagerUnderConditions(map, [di, dj], [ui, uj]) {
   let destColor = getIn(map, [di, dj, 'color']);
   let ownColor = getIn(map, [ui, uj, 'color']);
-  let hasTree = getIn(map, [di, dj, 'units', 'Tree']);
-  let hasTombstone = getIn(map, [di, dj, 'units', 'Tombstone']);
-
-  if (hasTree || hasTombstone || destColor !== ownColor) {
+  if (hasTreeOrTombstone(map, [di, dj]) || destColor !== ownColor) {
     map = assocIn(map, [ui, uj, 'units', 'Villager', 'hasMoved'], true);
   }
-
   return map;
 }
 
@@ -405,44 +444,22 @@ function cleanTreeAndTombstone(map, [di, dj], [ui, uj]) {
   return map;
 }
 
-// cannon, knight. don't go into tree/don't clean tombstones
-function cantTreeAndTombstone(map, [di, dj]) {
-  var hasTree = getIn(map, [di, dj, 'units', 'Tree']);
-  var hasTombstone = getIn(map, [di, dj, 'units', 'Tombstone']);
-
-  return hasTree || hasTombstone ? null : map;
+function trampleOnMeadowOnPath(path) {
+  return function(map) {
+    return path.reduce(trampleOnMeadow, map);
+  };
 }
 
 function stopCannon(map, [di, dj], [ui, uj]) {
   return assocIn(map, [ui, uj, 'units', 'Cannon', 'hasMoved'], true);
 }
 
-function kill(map, [di, dj], [ui, uj], name) {
+function kill(map, [di, dj], [ui, uj]) {
   if (!isEnemyColor(map, [di, dj], [ui, uj])) {
-    return null;
+    return map;
   }
-
-  let canAttack = M.every(a => {
-    let enemyName = M.first(a);
-    let config = M.second(a);
-    if (!rankers.killable[enemyName]) {
-      return true;
-    }
-    let rank = get(config, 'rank');
-    let enemyPreciseName = enemyName === 'Villager' ? rankers.villagerByRank[rank]
-      : enemyName === 'Village' ? rankers.villageByRank[rank]
-      : enemyName;
-
-    return rankers.canAttack[name][enemyPreciseName];
-  }, getIn(map, [di, dj, 'units']));
-
-  if (!canAttack) {
-    return null;
-  }
-
   map = dissocIn(map, [di, dj, 'units', 'Village']);
   map = dissocIn(map, [di, dj, 'units', 'Villager']);
-
   return map;
 }
 
@@ -569,64 +586,46 @@ function killGrayUnits(map) {
 }
 
 function move(map, [di, dj], [ui, uj], {name}) {
+  let path = findMovePath[name](map, [di, dj], [ui, uj]);
+  if (path.length === 0) {
+    return map;
+  }
+
+  let cleanup = [clearDeadRegions, killGrayMeadowCooldowns, killGrayUnits];
+  let villagerAttack = [kill, joinLands, moveUnit('Villager')];
+
   let ops = {
     Peasant: [
-      checkVillagerMovingToGoodTile,
-      // checkCantInvade,
       stopVillagerUnderConditions,
       cleanTreeAndTombstone,
-      checkConflict('Villager'),
+
       joinLands,
       moveUnit('Villager'),
     ],
     Infantry: [
-      checkVillagerMovingToGoodTile,
-      checkNeighborsAura,
       stopVillagerUnderConditions,
       cleanTreeAndTombstone,
-      kill,
-      checkConflict('Villager'),
-      joinLands,
-      moveUnit('Villager'),
-      clearDeadRegions,
-      killGrayMeadowCooldowns,
-      killGrayUnits,
+      ...villagerAttack,
+      ...cleanup
     ],
     Soldier: [
-      checkVillagerMovingToGoodTile,
-      checkNeighborsAura,
       stopVillagerUnderConditions,
       cleanTreeAndTombstone,
-      trampleOnMeadow,
-      kill,
-      checkConflict('Villager'),
-      joinLands,
-      moveUnit('Villager'),
-      clearDeadRegions,
-      killGrayMeadowCooldowns,
-      killGrayUnits,
+
+      trampleOnMeadowOnPath(path),
+      ...villagerAttack,
+      ...cleanup
     ],
     Knight: [
-      checkVillagerMovingToGoodTile,
-      checkNeighborsAura,
-      cantTreeAndTombstone,
       stopVillagerUnderConditions,
-      trampleOnMeadow,
-      kill,
-      checkConflict('Villager'),
-      joinLands,
-      moveUnit('Villager'),
-      clearDeadRegions,
-      killGrayMeadowCooldowns,
-      killGrayUnits,
+      trampleOnMeadowOnPath(path),
+
+      ...villagerAttack,
+      ...cleanup
     ],
     Cannon: [
-      checkCannonMovingToNeighbors,
-      checkCantInvade,
-      cantTreeAndTombstone,
       stopCannon,
       trampleOnMeadow,
-      checkConflict('Cannon'),
       joinLands,
       moveUnit('Cannon'),
     ],
@@ -634,13 +633,7 @@ function move(map, [di, dj], [ui, uj], {name}) {
 
   let res = map;
   for (var i = 0; i < ops[name].length; i++) {
-    let oldRes = res;
-    res = ops[name][i](res, [di, dj], [ui, uj], name);
-    if (res == null) {
-      ops[name][i](oldRes, [di, dj], [ui, uj], name);
-
-      return map;
-    }
+    res = ops[name][i](res, [di, dj], [ui, uj]);
   }
 
   return res;
@@ -1236,11 +1229,12 @@ var App = React.createClass({
         </div>;
     }
 
+    // trail only for Villager
     let moveTrail = [];
     if (pendingAction && pendingAction[1].move) {
       let rank = M.getIn(map, [...selectedCoords, 'units', 'Villager', 'rank']);
-      let canInvade = rankers.canInvade[rankers.villagerByRank[rank]];
-      moveTrail = findPath(map, hover, selectedCoords, 'Villager', canInvade);
+      let name = rankers.villagerByRank[rank];
+      moveTrail = findMovePath[name](map, hover, selectedCoords);
     }
 
     return (
