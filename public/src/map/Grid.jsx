@@ -7,6 +7,7 @@ var M = require('mori');
 var everyUnit = require('../everyUnit');
 var units = require('../units');
 var assetDims = require('../assetDims');
+var colorStyle = require('../colorStyle');
 var {overlay} = require('../assetUrls');
 var url = require('../utils/imgUrl');
 
@@ -18,30 +19,24 @@ function orderUnitsForDisplay(unitNames) {
   return M.sort((a, b) => nameInDisplayOrder[a] - nameInDisplayOrder[b], unitNames);
 }
 
-function getOverlayStyle(bg, color, isFocus, isActiveTurn) {
+function getOverlayStyle(color, isFocus, isActiveTurn) {
   var [w, h] = assetDims.overlay;
 
-  let hue = {
-    // original overlay is blue
-    Blue: 0,
-    Red: 90,
-    Orange: 190,
-    Purple: 50,
-  };
-
-  let filter = `hue-rotate(${hue[color]}deg)` + (isFocus ? ' brightness(1.7) ' : '');
-
   return {
-    backgroundImage: bg,
+    backgroundImage: url(overlay),
     backgroundRepeat: 'no-repeat',
     opacity: isFocus || isActiveTurn ? 1 : 0.5,
-    WebkitFilter: filter,
+    WebkitFilter: colorStyle[color],
     top: -4,
     zIndex: isFocus ? 100 : 99,
     width: w,
     height: h,
     marginLeft: (positioner.calcW() - w) / 2,
   };
+}
+
+function inCoords(arr, [i, j]) {
+  return arr.some(([i2, j2]) => i === i2 && j === j2);
 }
 
 var Grid = React.createClass({
@@ -51,6 +46,7 @@ var Grid = React.createClass({
     onTileMouseDown: p.func.isRequired,
     onTileHover: p.func.isRequired,
     turn: p.string,
+    moveTrail: p.arrayOf(p.arrayOf(p.number)),
   },
 
   render: function() {
@@ -61,6 +57,7 @@ var Grid = React.createClass({
       onTileHover,
       children,
       turn,
+      moveTrail,
     } = this.props;
 
     var h = M.count(tileConfigs);
@@ -81,15 +78,28 @@ var Grid = React.createClass({
           );
         }, orderedUnits);
 
-        var color = M.get(cell, 'color');
-        let overlayUrl = color === 'Gray' ? null : url(overlay);
+        let color = M.get(cell, 'color');
 
-        var maybeActiveOverlay;
+        let maybeActiveOverlay;
         if (i === hover[0] && j === hover[1]) {
           maybeActiveOverlay =
             <div
-              style={getOverlayStyle(url(overlay), 'Orange', true, false)}>
+              style={getOverlayStyle('Yellow', true, false)}>
             </div>;
+        }
+
+        let maybeTrailOverlay;
+        if (inCoords(moveTrail, [i, j])) {
+          maybeTrailOverlay =
+            <div
+              style={getOverlayStyle('BrightYellow', true, false)}>
+            </div>;
+        }
+
+        let maybeHighlightOverlay;
+        if (color !== 'Gray') {
+          maybeHighlightOverlay =
+              <div style={getOverlayStyle(color, false, turn === color)}></div>
         }
 
         return (
@@ -99,8 +109,9 @@ var Grid = React.createClass({
             onMouseDown={onTileMouseDown.bind(null, i, j)}
             onMouseEnter={onTileHover.bind(null, i, j)}>
               {js(unitComponents)}
-              <div style={getOverlayStyle(overlayUrl, color, false, turn === color)}></div>
+              {maybeHighlightOverlay}
               {maybeActiveOverlay}
+              {maybeTrailOverlay}
               {false && i + ',' + j}
           </Tile>
         );

@@ -1,10 +1,14 @@
 'use strict';
 
 var React = require('react');
+var M = require('mori');
 var everyUnit = require('../everyUnit');
 var units = require('../units');
 var everyUnitDefaultConfigDebug = require('./everyUnitDefaultConfigDebug');
-var M = require('mori');
+var colorStyle = require('../colorStyle');
+var {overlay} = require('../assetUrls');
+var assetDims = require('../assetDims');
+var url = require('../utils/imgUrl');
 
 var p = React.PropTypes;
 
@@ -45,6 +49,20 @@ var LandBox = React.createClass({
   }
 });
 
+function colorS(currColor, color) {
+  let [w, h] = assetDims.overlay;
+  return {
+    background: url(overlay),
+    width: w,
+    height: h,
+    color: 'white',
+    WebkitFilter: colorStyle[color],
+    outline: currColor === color ? '2px solid white' : 'none',
+    display: 'inline-block',
+    margin: 1,
+  };
+}
+
 var UnitSelector = React.createClass({
   propTypes: {
     unitName: p.string.isRequired,
@@ -61,18 +79,6 @@ var UnitSelector = React.createClass({
       flexWrap: 'wrap',
     };
 
-    let colorS = (color2) => {
-      return {
-        backgroundColor: color2,
-        // display: 'flex',
-        width: 50,
-        height: 50,
-        color: 'white',
-        outline: color === color2 ? '2px solid white' : 'none',
-        display: 'inline-block',
-        margin: 1,
-      };
-    };
 
     return (
       <div {...props} style={s}>
@@ -87,21 +93,10 @@ var UnitSelector = React.createClass({
         })}
 
         <div>
-          <div
-            onClick={onColorClick.bind(null, 'Red')}
-            style={colorS('Red')}>
-              Red
-          </div>
-          <div
-            onClick={onColorClick.bind(null, 'Blue')}
-            style={colorS('Blue')}>
-              Blue
-          </div>
-          <div
-            onClick={onColorClick.bind(null, 'Gray')}
-            style={colorS('Gray')}>
-              Gray
-          </div>
+          <div style={colorS(color, 'Red')} onClick={onColorClick.bind(null, 'Red')} />
+          <div style={colorS(color, 'Blue')} onClick={onColorClick.bind(null, 'Blue')} />
+          <div style={colorS(color, 'Orange')} onClick={onColorClick.bind(null, 'Orange')} />
+          <div style={colorS(color, 'Gray')} onClick={onColorClick.bind(null, 'Gray')} />
         </div>
       </div>
     );
