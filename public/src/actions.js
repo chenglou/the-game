@@ -36,24 +36,24 @@ let pendingActions = {
 
   Villager: {
     Peasant: [
-      ['Move', 'move', {name: 'Peasant'}],
+      ['Move', 'move', {name: 'Peasant', typeName: 'Villager', move: true}],
       ['Cultivate Meadow', 'build', {name: 'Meadow', cooldown: 2}],
       ['Build Road', 'build', {name: 'Road', cooldown: 1}],
       ['Upgrade to Infantry', 'upgradeVillager', {gold: 10, wood: 0, nextName: 'Infantry'}],
       combine,
     ],
     Infantry: [
-      ['Move', 'move', {name: 'Infantry'}],
+      ['Move', 'move', {name: 'Infantry', typeName: 'Villager', move: true}],
       ['Upgrade to Soldier', 'upgradeVillager', {gold: 10, wood: 0, nextName: 'Soldier'}],
       combine,
     ],
     Soldier: [
-      ['Move', 'move', {name: 'Soldier'}],
+      ['Move', 'move', {name: 'Soldier', typeName: 'Villager', move: true}],
       ['Upgrade to Knight', 'upgradeVillager', {gold: 10, wood: 0, nextName: 'Knight'}],
       combine,
     ],
     Knight: [
-      ['Move', 'move', {name: 'Knight'}],
+      ['Move', 'move', {name: 'Knight', typeName: 'Villager', move: true}],
     ],
   },
 

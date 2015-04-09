@@ -36,6 +36,12 @@ for (let key in canAttack) {
   canAttack[key] = arrToSet(canAttack[key]);
 }
 
+let canInvade = {
+  Infantry: true,
+  Soldier: true,
+  Knight: true,
+};
+
 let hasAura = {
   Villager: true,
   Village: true,
@@ -67,4 +73,5 @@ module.exports = {
   canAttack,
   killable,
   villageUpgradeHp,
+  canInvade,
 };

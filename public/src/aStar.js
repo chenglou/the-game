@@ -4,7 +4,7 @@ var M = require('mori');
 var findNeighbors = require('./findNeighbors');
 var arr2D = require('./utils/arr2D');
 
-function findPath(map, [si, sj], [ei, ej]) {
+function aStar(map, [si, sj], [ei, ej]) {
   if (M.getIn(map, [ei, ej]) === 1) {
     return [];
   }
@@ -123,12 +123,12 @@ function setupHeuristic(map, start, [ei, ej]) {
 // }
 
 // console.log(JSON.stringify(
-//   findPath(
+//   aStar(
 //     M.toClj(
 //       [[0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 1, 1, 0, 1, 1, 0, 0], [0, 0, 1, 1, 1, 1, 1, 1, 0], [0, 0, 1, 1, 1, 1, 1, 0, 0], [0, 0, 0, 1, 1, 1, 1, 0, 0], [0, 0, 0, 1, 1, 1, 0, 0, 0], [0, 0, 0, 0, 1, 1, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0]]
 //     ), [0, 4], [9, 4]
 //   )
 // ));
 
-module.exports = findPath;
+module.exports = aStar;
 

@@ -6,6 +6,7 @@ var {Menu, MenuItem} = require('./src/Menu');
 var M = require('mori');
 var dissocIn = require('./src/utils/dissocIn');
 var randNth = require('./src/utils/randNth');
+var arr2D = require('./src/utils/arr2D');
 var add = require('./src/utils/add');
 var findNeighbors = require('./src/findNeighbors');
 var hasConflict = require('./src/hasConflict');
@@ -23,7 +24,7 @@ var trampleOnMeadow = require('./src/trampleOnMeadow');
 var canMoveToAura = require('./src/canMoveToAura');
 var updateMap = require('./src/updateMap');
 var getMenuItems = require('./src/getMenuItems');
-var pathFinding = require('./src/pathFinding');
+var aStar = require('./src/aStar');
 var map1 = require('./src/map/data/map1');
 let js = M.toJs;
 let clj = M.toClj;
@@ -313,15 +314,53 @@ function findAllRegions(map) {
 
 // move =======
 
-function checkMovingToNeighbors(map, [di, dj], [ui, uj]) {
-  // TODO: path finding, no need to have this anymore
-  var movingToNeighbor = findNeighbors(map, ui, uj)
-    .some(([i, j]) => i === di && j === dj);
+function checkCannonMovingToNeighbors(map, [di, dj], [ui, uj]) {
+  var movingToNeighbor =
+    findNeighbors(map, ui, uj).some(([i, j]) => i === di && j === dj);
 
   return movingToNeighbor ? map : null;
 }
 
+function isEnemyColor(map, [oi, oj], [di, dj]) {
+  let ownColor = getIn(map, [oi, oj, 'color']);
+  let destColor = getIn(map, [di, dj, 'color']);
+  return destColor !== 'Gray' && ownColor !== destColor;
+}
+
+// TODO: can't touch tree
+function findPath(map, [di, dj], [ui, uj], typeName, canInvade) {
+  // check actions.js signature for move
+  let height = M.count(map);
+  let width = M.count(M.first(map));
+  let destColor = getIn(map, [di, dj, 'color']);
+  let region = findRegion(map, ui, uj);
+
+  if (destColor === 'Gray' ||
+    (canInvade && isEnemyColor(map, [ui, uj], [di, dj]))) {
+    region.push([di, dj]);
+  }
+
+  let coordsMap = region.reduce((coordsMap, [i, j]) => {
+    if (hasConflict(map, typeName, i, j)) {
+      return coordsMap;
+    }
+    coordsMap[i][j] = 0;
+    return coordsMap;
+  }, arr2D(() => 1, width, height));
+
+  return aStar(clj(coordsMap), [ui, uj], [di, dj]);
+}
+
+// assume function reserved for Villager for now
+function checkVillagerMovingToGoodTile(map, [di, dj], [ui, uj]) {
+  let rank = M.getIn(map, [ui, uj, 'units', 'Villager', 'rank']);
+  let canInvade = rankers.canInvade[rankers.villagerByRank[rank]];
+  let path = findPath(map, [di, dj], [ui, uj], 'Villager', canInvade);
+  return path.length === 0 ? null : map;
+}
+
 // peasant, cannon
+// TODO: peasant don't use this
 function checkCantInvade(map, [di, dj], [ui, uj]) {
   var destColor = getIn(map, [di, dj, 'color']);
   var ownColor = getIn(map, [ui, uj, 'color']);
@@ -546,8 +585,8 @@ function killGrayUnits(map) {
 function move(map, [di, dj], [ui, uj], {name}) {
   let ops = {
     Peasant: [
-      checkMovingToNeighbors,
-      checkCantInvade,
+      checkVillagerMovingToGoodTile,
+      // checkCantInvade,
       stopVillagerUnderConditions,
       cleanTreeAndTombstone,
       checkConflict('Villager'),
@@ -555,7 +594,7 @@ function move(map, [di, dj], [ui, uj], {name}) {
       moveUnit('Villager'),
     ],
     Infantry: [
-      checkMovingToNeighbors,
+      checkVillagerMovingToGoodTile,
       checkNeighborsAura,
       stopVillagerUnderConditions,
       cleanTreeAndTombstone,
@@ -568,7 +607,7 @@ function move(map, [di, dj], [ui, uj], {name}) {
       killGrayUnits,
     ],
     Soldier: [
-      checkMovingToNeighbors,
+      checkVillagerMovingToGoodTile,
       checkNeighborsAura,
       stopVillagerUnderConditions,
       cleanTreeAndTombstone,
@@ -582,7 +621,7 @@ function move(map, [di, dj], [ui, uj], {name}) {
       killGrayUnits,
     ],
     Knight: [
-      checkMovingToNeighbors,
+      checkVillagerMovingToGoodTile,
       checkNeighborsAura,
       cantTreeAndTombstone,
       stopVillagerUnderConditions,
@@ -596,7 +635,7 @@ function move(map, [di, dj], [ui, uj], {name}) {
       killGrayUnits,
     ],
     Cannon: [
-      checkMovingToNeighbors,
+      checkCannonMovingToNeighbors,
       checkCantInvade,
       cantTreeAndTombstone,
       stopCannon,
@@ -1015,7 +1054,9 @@ var App = React.createClass({
   },
 
   handleTileHover: function(i, j) {
-    var {map, creatingUnit, consoleSelectedColor, consoleSelectedUnit, mouseDown} = this.state;
+    let {
+      map, creatingUnit, consoleSelectedColor, consoleSelectedUnit, mouseDown
+    } = this.state;
 
     this.setState({
       hover: [i, j],
@@ -1077,7 +1118,7 @@ var App = React.createClass({
       selectedCoords,
       map,
       phase,
-      // pendingAction,
+      pendingAction,
       showMenu,
       turns,
       currTurn,
@@ -1211,6 +1252,13 @@ var App = React.createClass({
         </div>;
     }
 
+    let moveTrail = [];
+    if (pendingAction && pendingAction[1].move) {
+      let rank = M.getIn(map, [...selectedCoords, 'units', 'Villager', 'rank']);
+      let canInvade = rankers.canInvade[rankers.villagerByRank[rank]];
+      moveTrail = findPath(map, hover, selectedCoords, 'Villager', canInvade);
+    }
+
     return (
       <div>
         <div style={clickS} onClick={this.handleCheatClick}>Cheat Mode</div>
@@ -1218,6 +1266,7 @@ var App = React.createClass({
         {maybeConsole}
         <Grid
           hover={hover}
+          moveTrail={moveTrail}
           turn={currTurnColor}
           tileConfigs={map}
           onTileMouseDown={this.handleTileMouseDown}
