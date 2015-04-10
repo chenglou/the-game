@@ -7,13 +7,13 @@ let p = React.PropTypes;
 
 var Login = React.createClass({
   propTypes: {
-    onSuccess: p.func,
+    onSuccess: p.func.isRequired,
   },
 
   getInitialState: function() {
     return {
-      name: '',
-      pass: '',
+      name: 'a',
+      pass: '1',
       error: null,
       register: false,
     };

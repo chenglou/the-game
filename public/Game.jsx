@@ -26,13 +26,14 @@ var updateMap = require('./src/updateMap');
 var inCoordsList = require('./src/inCoordsList');
 var getMenuItems = require('./src/getMenuItems');
 var aStar = require('./src/aStar');
-var map1 = require('./src/map/data/map1');
 
 var request = require('superagent');
 
 let js = M.toJs;
 let clj = M.toClj;
 let {getIn, get, assoc, assocIn, updateIn} = M;
+
+var map1 = clj(require('./src/map/data/map1'));
 
 function getUnitsByName(map, unitName) {
   return M.mapcat((row, i) => {
@@ -708,7 +709,7 @@ var cancelPendingActionState = {
 };
 
 var veryFirstState = {
-  map: clj(map1),
+  map: map1,
   currTurn: 0,
   phase: 'Player',
   selfTurn: 0,
@@ -817,10 +818,6 @@ var App = React.createClass({
       fbState,
       fbEmptySlots,
     } = this.state;
-
-    window.onbeforeunload = () => {
-      // return 'asd';
-    };
 
     window.addEventListener('keydown', (e) => {
       if (e.which === 27) {

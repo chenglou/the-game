@@ -43,7 +43,7 @@ var Grid = React.createClass({
     onTileMouseDown: p.func.isRequired,
     onTileHover: p.func.isRequired,
     turn: p.string,
-    moveTrail: p.arrayOf(p.arrayOf(p.number)),
+    moveTrail: p.arrayOf(p.arrayOf(p.number)).isRequired,
   },
 
   render: function() {
