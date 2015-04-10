@@ -1318,14 +1318,6 @@ var Game = React.createClass({
         </div>;
     }
 
-    // trail only for Villager
-    let moveTrail = [];
-    if (pendingAction && pendingAction[1].move) {
-      let rank = M.getIn(map, [...selectedCoords, 'units', 'Villager', 'rank']);
-      let name = rankers.villagerByRank[rank];
-      moveTrail = findMovePath[name](map, hover, selectedCoords);
-    }
-
     let origMap = maps[originalMapIndex];
     let colors = getMapPlayerColors(map);
     let origColors = getMapPlayerColors(origMap);
@@ -1355,6 +1347,17 @@ var Game = React.createClass({
         <MenuItem onClick={this.props.onWin}>
           Go back
         </MenuItem>;
+    }
+
+    // trail only for Villager
+    let moveTrail = [];
+    if (pendingAction && pendingAction[1].move) {
+      let rank = M.getIn(map, [...selectedCoords, 'units', 'Villager', 'rank']);
+      let name = rankers.villagerByRank[rank];
+      moveTrail = findMovePath[name](map, hover, selectedCoords);
+      if (moveTrail.length > 0) {
+        map = move(map, hover, selectedCoords, {name});
+      }
     }
 
     return (
