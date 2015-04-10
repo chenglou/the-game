@@ -90,6 +90,11 @@ function killTombstones(map, turn) {
 }
 
 function resetUnitMoves(map, turn) {
+  map = updateMap(
+    map,
+    getUnitsByColorAndName(map, turn, 'Cannon'),
+    cell => assocIn(cell, ['units', 'Cannon', 'hasMoved'], false)
+  );
   return updateMap(
     map,
     getUnitsByColorAndName(map, turn, 'Villager'),

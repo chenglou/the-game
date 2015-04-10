@@ -319,7 +319,7 @@ var Wrapper = React.createClass({
     }
 
     let chat = this.state.db.chat;
-    let msgs = this.state.db.chat && this.state.db.chat.split('\n');
+    let msgs = chat && chat.split('\n');
     if (msgs) {
       msgs = msgs.filter(msg => {
         if (/\s*: \\/.test(msg)) {
