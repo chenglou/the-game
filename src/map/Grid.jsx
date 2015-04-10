@@ -96,7 +96,7 @@ var Grid = React.createClass({
         let maybeHighlightOverlay;
         if (color !== 'Gray') {
           maybeHighlightOverlay =
-              <div style={getOverlayStyle(color, false, turn === color)}></div>
+            <div style={getOverlayStyle(color, false, turn === color)}></div>;
         }
 
         return (

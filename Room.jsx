@@ -1,11 +1,9 @@
 'use strict';
 
 let React = require('react');
-let request = require('superagent');
 let {MenuItem} = require('./src/Menu');
 let Grid = require('./src/map/Grid');
 let allMaps = require('./src/allMaps');
-var M = require('mori');
 
 let p = React.PropTypes;
 

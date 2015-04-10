@@ -111,24 +111,5 @@ function setupHeuristic(map, start, [ei, ej]) {
   return heuristic;
 }
 
-// function rand() {
-//   let res = [];
-//   for (let i = 0; i < 20; i++) {
-//     res.push([]);
-//     for (let j = 0; j < 30; j++) {
-//       res[i][j] = Math.random() > .5 ? 1 : 0;
-//     }
-//   }
-//   return res;
-// }
-
-// console.log(JSON.stringify(
-//   aStar(
-//     M.toClj(
-//       [[0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 1, 1, 0, 1, 1, 0, 0], [0, 0, 1, 1, 1, 1, 1, 1, 0], [0, 0, 1, 1, 1, 1, 1, 0, 0], [0, 0, 0, 1, 1, 1, 1, 0, 0], [0, 0, 0, 1, 1, 1, 0, 0, 0], [0, 0, 0, 0, 1, 1, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0]]
-//     ), [0, 4], [9, 4]
-//   )
-// ));
-
 module.exports = aStar;
 

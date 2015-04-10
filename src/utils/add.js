@@ -1,3 +1,5 @@
+'use strict';
+
 // hand-rolled currying
 function add(x) {
   return function(y) {
