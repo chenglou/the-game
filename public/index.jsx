@@ -11,13 +11,31 @@ var M = require('mori');
 let clj = M.toClj;
 let js = M.toJs;
 
-let mapsLength = 2;
+let maps = [
+  M.toClj(require('./src/map/data/map1')),
+  M.toClj(require('./src/map/data/map2')),
+];
 
 function sameRoom(a, b) {
   var {map, ...r} = a;
   let map1 = map;
   var {map, ...r2} = b;
   return M.equals(clj(r), clj(r2)) && M.equals(map1, map);
+}
+
+function isGameTime({users, currMapIndex}) {
+  let names = Object.keys(users);
+  let allReady = names.every(name => users[name].ready);
+  let colors = M.reduce((colors, row) => {
+    return M.reduce((colors, cell) => {
+      colors[M.get(cell, 'color')] = true;
+      return colors;
+    }, colors, row);
+  }, {}, maps[currMapIndex]);
+  delete colors.Gray;
+  console.log(allReady, colors, names);
+
+  return allReady && Object.keys(colors).length === names.length;
 }
 
 var App = React.createClass({
@@ -31,7 +49,17 @@ var App = React.createClass({
 
   componentDidMount: function() {
     window.onbeforeunload = () => {
-      // return 'asd';
+      let user = this.state.user;
+      let {users, ...rest} = this.state.room;
+      let newUsers = js(clj(users));
+      delete newUsers[user.name];
+      this.setState({
+        room: {
+          ...{users: newUsers},
+          ...rest,
+        },
+      });
+      return 'Are you sure?';
     };
   },
 
@@ -107,11 +135,12 @@ var App = React.createClass({
   },
 
   handleDecideMap: function() {
-    let {room, user} = this.state;
+    let {room, user, screen} = this.state;
     let {map, ...rest} = room;
     // fuck mutations
     let newRest = js(clj(rest));
     newRest.users[user.name].ready = true;
+
     this.setState({
       room: {map: map, ...newRest},
     });
@@ -123,9 +152,9 @@ var App = React.createClass({
 
     let next = currMapIndex + step;
     if (next < 0) {
-      next = mapsLength - 1;
+      next = maps.length - 1;
     }
-    if (next >= mapsLength) {
+    if (next >= maps.length) {
       next = 0;
     }
     let newUsers = js(clj(users));
@@ -141,7 +170,10 @@ var App = React.createClass({
     let {screen, room, user} = this.state;
 
     let thing;
-    if (screen === 'login') {
+    if (room && isGameTime(room)) {
+      thing =
+        <Game />;
+    } else if (screen === 'login') {
       thing =
         <Login onSuccess={this.handleSuccess} />;
     } else if (screen === 'rooms') {

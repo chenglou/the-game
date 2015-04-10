@@ -48,7 +48,7 @@ var Room = React.createClass({
         <button onClick={onChooseMap.bind(null, -1)}>Prev</button>
         <button onClick={onChooseMap.bind(null, 1)}>Next</button>
         <MenuItem
-          disabled={room.users[user.name].ready}
+          disabled={room.users[user.name] && room.users[user.name].ready}
           onClick={onDecideMap}>
           Choose
         </MenuItem>
