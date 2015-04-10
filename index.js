@@ -107,7 +107,6 @@ app.post('/syncRoom', function(req, res, next) {
   Object.keys(room.users).forEach(function(name) {
     users[name] = room.users[name];
   });
-  console.log(users);
   res.send({over: over});
   next();
 });
