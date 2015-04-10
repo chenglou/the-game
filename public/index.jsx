@@ -11,7 +11,7 @@ var {getMapPlayerColors, getMapPlayerColorsM} = require('./src/getMapPlayerColor
 var allMaps = require('./src/allMaps');
 var faker = require('faker');
 
-var reactFire = require('reactFire');
+var reactFire = require('reactfire');
 var Firebase = require('firebase');
 
 let clj = M.toClj;

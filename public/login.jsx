@@ -3,7 +3,7 @@
 var React = require('react');
 var request = require('superagent');
 
-var reactFire = require('reactFire');
+var reactFire = require('reactfire');
 var Firebase = require('firebase');
 
 let p = React.PropTypes;
