@@ -800,9 +800,9 @@ var Game = React.createClass({
       [growTrees, 'Tree Growth', 0],
       [resetUnitMoves, '', 0],
       [killTombstones, 'Kill Tombstones', 0],
-      [matureTiles, 'Builds', 400],
-      [addIncome, 'Generate Income', 400],
-      [payOrDie, 'Payment', 400],
+      [matureTiles, 'Builds', 700],
+      [addIncome, 'Generate Income', 700],
+      [payOrDie, 'Payment', 700],
     ];
 
     let doStep = steps => {
