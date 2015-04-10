@@ -208,40 +208,21 @@ var Wrapper = React.createClass({
     });
   },
 
-  // handleCrownWinners: function() {
-  //   let {room, user} = this.state;
-  //   let {map, currMapIndex} = room;
-  //   let origMap = maps[currMapIndex];
-  //   let colors = getMapPlayerColorsM(map);
-  //   let origColors = getMapPlayerColorsM(origMap);
+  handleWin: function() {
+    let {users, ...rest} = this.state.room;
+    let newUsers = js(clj(users));
+    Object.keys(newUsers).forEach(name => {
+      newUsers[name].ready = false;
+    });
 
-  //   let colorsToUsers = M.zipmap(
-  //     getMapPlayerColors(maps[room.currMapIndex]),
-  //     Object.keys(room.users).sort()
-  //   );
-  //   let winners = M.map(
-  //     color => M.get(colorsToUsers, color),
-  //     M.intersection(colors, origColors)
-  //   );
-  //   let losers = M.map(
-  //     color => M.get(colorsToUsers, color),
-  //     M.difference(colors, origColors)
-  //   );
-  //   request
-  //     .post('/updateScores')
-  //     .send({
-  //       roomName: room.name,
-  //       userName: user.name,
-  //       winners: js(winners),
-  //       losers: js(losers),
-  //     })
-  //     .set('Accept', 'application/json')
-  //     .end((err, res) => {
-  //       this.setState({
-  //         user: JSON.parse(res.text),
-  //       });
-  //     });
-  // },
+    this.setState({
+      screen: 'rooms',
+      room: {
+        users: newUsers,
+        ...rest,
+      },
+    });
+  },
 
   render: function() {
     let {screen, room, userName} = this.state;
@@ -258,7 +239,7 @@ var Wrapper = React.createClass({
           selfTurn={selfTurn}
           syncProps={this.handleSyncProps}
           originalMapIndex={room.currMapIndex}
-          crownWinners={this.handleCrownWinners}
+          onWin={this.handleWin}
           />;
     } else if (screen === 'login') {
       thing =

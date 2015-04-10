@@ -104,11 +104,11 @@ app.post('/syncRoom', function(req, res, next) {
   var room = req.body.room;
   rooms[roomName] = room;
   var over = room.over;
-  if (over) {
-    Object.keys(room.users).forEach(function(name) {
-      room.users[name].ready = false;
-    });
-  }
+  // if (over) {
+  //   Object.keys(room.users).forEach(function(name) {
+  //     room.users[name].ready = false;
+  //   });
+  // }
   Object.keys(room.users).forEach(function(name) {
     users[name] = room.users[name];
   });

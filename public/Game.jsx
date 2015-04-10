@@ -726,6 +726,7 @@ var Game = React.createClass({
     currTurn: p.number.isRequired,
     selfTurn: p.number.isRequired,
     originalMapIndex: p.number.isRequired,
+    onWin: p.func.isRequired,
 
     syncProps: p.func.isRequired,
   },
@@ -1349,6 +1350,11 @@ var Game = React.createClass({
         <div style={s}>
           Game Over!
         </div>;
+
+      doneClick =
+        <MenuItem onClick={this.props.onWin}>
+          Go back
+        </MenuItem>;
     }
 
     return (
