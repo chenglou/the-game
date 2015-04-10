@@ -3,11 +3,18 @@
 var React = require('react');
 var request = require('superagent');
 
+var reactFire = require('reactFire');
+var Firebase = require('firebase');
+
 let p = React.PropTypes;
 
 var Login = React.createClass({
+  mixins: [reactFire],
+
   propTypes: {
-    onSuccess: p.func.isRequired,
+    onLogin: p.func.isRequired,
+    onRegister: p.func.isRequired,
+    loginError: p.string,
   },
 
   getInitialState: function() {
@@ -29,20 +36,11 @@ var Login = React.createClass({
     let {name, pass, register} = this.state;
     e.preventDefault();
 
-    request
-      .post(register ? '/register' : '/login')
-      .send({name, pass})
-      .set('Accept', 'application/json')
-      .end((err, res) => {
-        if (err) {
-          this.setState({
-            error: err.response.text,
-            pass: '',
-          });
-          return;
-        }
-        this.props.onSuccess(name);
-      });
+    if (!register) {
+      this.props.onLogin(name, pass);
+    } else {
+      this.props.onRegister(name, pass);
+    }
   },
 
   handleRegister: function() {
@@ -52,15 +50,17 @@ var Login = React.createClass({
   },
 
   render: function() {
-    let {name, pass, error, register} = this.state;
+    let {name, pass, register} = this.state;
+    let {loginError} = this.props;
+
     let maybeError;
-    if (error) {
+    if (loginError) {
       let errorS = {
         color: 'white',
       };
       maybeError =
         <div style={errorS}>
-          {error}
+          {loginError}
           <input type="button" onClick={this.handleRegister} value="Register instead" />
         </div>;
     }

@@ -14,7 +14,6 @@ var positioner = require('./src/map/positioner');
 var {defaultConfig} = require('./src/everyUnit');
 var rankers = require('./src/rankers');
 var {immediateActions} = require('./src/actions');
-var Firebase = require('firebase');
 var UnitSelector = require('./src/debug/UnitSelector');
 var surroundWithSea = require('./src/debug/surroundWithSea');
 var forceAddNewUnit = require('./src/debug/forceAddNewUnit');
@@ -795,9 +794,9 @@ var Game = React.createClass({
       [growTrees, 'Tree Growth', 0],
       [resetUnitMoves, '', 0],
       [killTombstones, 'Kill Tombstones', 0],
-      [matureTiles, 'Builds', 1700],
-      [addIncome, 'Generate Income', 1700],
-      [payOrDie, 'Payment', 1700],
+      [matureTiles, 'Builds', 400],
+      [addIncome, 'Generate Income', 400],
+      [payOrDie, 'Payment', 400],
     ];
 
     let doStep = steps => {

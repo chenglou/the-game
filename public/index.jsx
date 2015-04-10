@@ -9,6 +9,10 @@ var request = require('superagent');
 var M = require('mori');
 var {getMapPlayerColors, getMapPlayerColorsM} = require('./src/getMapPlayerColors');
 var allMaps = require('./src/allMaps');
+var faker = require('faker');
+
+var reactFire = require('reactFire');
+var Firebase = require('firebase');
 
 let clj = M.toClj;
 let js = M.toJs;
@@ -20,7 +24,7 @@ function sameRoom(a, b) {
   return M.equals(clj(r), clj(r2)) && M.equals(map1, map);
 }
 
-function isGameTime({users, currMapIndex}) {
+function isGameTime(users, currMapIndex) {
   let names = Object.keys(users);
   let allReady = names.every(name => users[name].ready);
   let colors = getMapPlayerColors(allMaps[currMapIndex]);
@@ -29,57 +33,48 @@ function isGameTime({users, currMapIndex}) {
 }
 
 var Wrapper = React.createClass({
+  mixins: [reactFire],
+
   getInitialState: function() {
     return {
       screen: 'login',
       userName: null,
-      room: null,
+      roomName: null,
+
+      loginError: null,
+
+      db: {},
+
+      fb: new Firebase('https://361.firebaseio.com/db/'),
     };
+  },
+
+  componentWillMount: function() {
+    this.bindAsObject(this.state.fb, 'db');
   },
 
   componentDidMount: function() {
     window.onbeforeunload = () => {
-      let {users, ...rest} = this.state.room;
-      let newUsers = js(clj(users));
-      delete newUsers[this.state.userName];
-      this.setState({
-        room: {
-          ...{users: newUsers},
-          ...rest,
-        },
-      });
+      let {db, roomName, userName} = this.state;
+      db.users[userName].ready = false;
+      delete db.rooms[roomName].users[userName];
+      this.firebaseRefs.db.set(db);
       return 'Are you sure?';
     };
   },
 
-  startSync: function() {
-    let f = () => {
-      let {room} = this.state;
-      request
-        .post('/listenRoomP')
-        .send({roomName: room.name})
-        .set('Accept', 'application/json')
-        .end((err, res) => {
-          let {map, ...rest} = JSON.parse(res.text);
-          let newRoom = {
-            map: clj(map),
-            ...rest,
-          };
-          if (sameRoom(this.state.room, newRoom)) {
-            setTimeout(f, 300);
-            return;
-          }
-
-          this.setState({
-            room: newRoom,
-          });
-          setTimeout(f, 300);
-        });
-    };
-    f();
-  },
-
   componentDidUpdate: function(prevProps, ps) {
+    let {roomName, screen, db} = this.state;
+
+    if (screen !== 'game' && roomName) {
+      if (isGameTime(db.users, db.rooms[roomName].currMapIndex)) {
+        this.setState({
+          screen: 'game',
+        });
+      }
+    }
+    return;
+
     let room = this.state.room;
     if (!room) {
       return;
@@ -99,62 +94,129 @@ var Wrapper = React.createClass({
       .end();
   },
 
-  handleLoginSuccess: function(name) {
+  handleLogin: function(name, pass) {
+    let {users} = this.state.db;
+    if (!users[name]) {
+      this.setState({
+        loginError: 'Invalid name',
+      });
+      return;
+    }
+    if (users[name].pass !== pass) {
+      this.setState({
+        loginError: 'Invalid password',
+      });
+      return;
+    }
     this.setState({
       screen: 'rooms',
       userName: name,
     });
   },
 
-  handleRoomPicked: function(room) {
-    // got it from server, map is js
-    let {map, ...rest} = room;
-    this.setState({
-      screen: 'room',
-      room: {
-        map: clj(map),
-        ...rest,
-      },
-    }, () => {
-      this.startSync();
+  handleRegister: function(name, pass) {
+    let {users} = this.state.db;
+    if (users[name]) {
+      this.setState({
+        loginError: 'Name already taken',
+      });
+      return;
+    }
+    this.state.db.users[name] = {
+      name: name,
+      pass: pass,
+      ready: false,
+      totalPlayed: 0,
+      totalWon: 0,
+    };
+    this.firebaseRefs.db.set(this.state.db, () => {
+      this.setState({
+        screen: 'rooms',
+        userName: name,
+      });
+    });
+  },
+
+  handleRoomPicked: function(name) {
+    if (!this.state.db.rooms[name].users) {
+      this.state.db.rooms[name].users = {};
+    }
+    this.state.db.rooms[name].users[this.state.userName] = true;
+    this.firebaseRefs.db.set(this.state.db, () => {
+      this.setState({
+        screen: 'room',
+        roomName: name,
+      });
+    });
+  },
+
+  handleRoomCreate: function() {
+    var roomName = faker.company.bsAdjective() + ' ' + Math.floor(Math.random() * 99);
+
+    if (!this.state.db.rooms) {
+      this.state.db.rooms = {};
+    }
+    this.state.db.rooms[roomName] = {
+      name: roomName,
+      map: JSON.stringify(js(allMaps[0])),
+      currMapIndex: 0,
+      users: {},
+      currTurn: 0,
+      phase: 'Player',
+    };
+    this.firebaseRefs.db.set(this.state.db, () => {
+      this.setState({roomName});
     });
   },
 
   handleDecideMap: function() {
-    let {room: {map, ...rest}, userName} = this.state;
-    // fuck mutations
-    let newRest = js(clj(rest));
-    newRest.users[userName].ready = true;
-
-    this.setState({
-      room: {
-        map: allMaps[newRest.currMapIndex],
-        ...newRest,
-      },
+    let {userName, roomName} = this.state;
+    this.state.db.users[userName].ready = true;
+    this.firebaseRefs.db.set(this.state.db, () => {
+      if (isGameTime(this.state.db.users, this.state.db.rooms[roomName].currMapIndex)) {
+        this.setState({
+          screen: 'game',
+        });
+      }
     });
   },
 
   handleChooseMap: function(step) {
-    let {room} = this.state;
-    let {currMapIndex, users, ...rest} = room;
+    let {roomName} = this.state;
 
-    let next = currMapIndex + step;
+    let next = this.state.db.rooms[roomName].currMapIndex + step;
     if (next < 0) {
       next = allMaps.length - 1;
     }
     if (next >= allMaps.length) {
       next = 0;
     }
-    let newUsers = js(clj(users));
-    Object.keys(newUsers).forEach(name => {
-      newUsers[name].ready = false;
-    });
-    this.setState({
-      room: {currMapIndex: next, users: newUsers, ...rest},
-    });
+
+    this.state.db.rooms[roomName].currMapIndex = next;
+    this.state.db.rooms[roomName].map = JSON.stringify(js(allMaps[next]));
+
+    Object.keys(this.state.db.rooms[roomName].users).forEach(name => {
+      this.state.db.users[name].ready = false;
+    }, this);
+    this.firebaseRefs.db.set(this.state.db);
   },
 
   handleSyncProps: function(stuff) {
+    let s = this.state;
+    let {roomName, db} = s;
+
+    let newMap = stuff.map ? JSON.stringify(js(stuff.map)) : db.rooms[roomName].map;
+    let newCurrTurn = stuff.currTurn;
+    let newPhase = stuff.phase;
+
+    db.rooms[roomName].map = newMap;
+    db.rooms[roomName].phase = newPhase || db.rooms[roomName].phase;
+    db.rooms[roomName].currTurn = newCurrTurn == null ? db.rooms[roomName].currTurn : newCurrTurn;
+    this.firebaseRefs.db.set(db);
+
+    return;
+
+    debugger;
     let {room} = this.state;
     let {map, phase, currTurn, over, users, ...rest} = room;
 
@@ -204,31 +266,80 @@ var Wrapper = React.createClass({
   },
 
   handleWin: function() {
-    let {users, ...rest} = this.state.room;
-    let newUsers = js(clj(users));
-    Object.keys(newUsers).forEach(name => {
-      newUsers[name].ready = false;
+    let {roomName} = this.state;
+    let db = this.state.db;
+    let room = db.rooms[roomName];
+
+    Object.keys(db.rooms[roomName].users).forEach(name => {
+      db.users[name].ready = false;
+    }, this);
+
+    let origMap = allMaps[room.currMapIndex];
+    let colors = getMapPlayerColorsM(clj(JSON.parse(room.map)));
+    let origColors = getMapPlayerColorsM(origMap);
+
+    let colorsToUsers = M.zipmap(
+      getMapPlayerColors(allMaps[room.currMapIndex]),
+      Object.keys(room.users).sort()
+    );
+    let winners = M.map(
+      color => M.get(colorsToUsers, color),
+      M.intersection(colors, origColors)
+    );
+    let losers = M.map(
+      color => M.get(colorsToUsers, color),
+      M.difference(origColors, colors)
+    );
+
+    M.each(winners, name => {
+      db.users[name].totalPlayed++;
+      db.users[name].totalWon++;
+    });
+    M.each(losers, name => {
+      db.users[name].totalPlayed++;
     });
 
-    this.setState({
-      screen: 'rooms',
-      room: {
-        users: newUsers,
-        ...rest,
+    this.firebaseRefs.db.set(db, () => {
+      this.setState({
+        screen: 'rooms',
+        roomName: null
+      });
+    });
+  },
+
+  resetFb: function() {
+    this.firebaseRefs.db.set({
+      users: {
+        a: {
+          name: 'a',
+          pass: '1',
+          ready: false,
+          totalPlayed: 0,
+          totalWon: 0,
+        },
+        b: {
+          name: 'b',
+          pass: '2',
+          ready: false,
+          totalPlayed: 0,
+          totalWon: 0,
+        },
       },
+      rooms: {},
     });
   },
 
   render: function() {
-    let {screen, room, userName} = this.state;
+    let {screen, roomName, userName, loginError} = this.state;
 
     let thing;
-    if (room && isGameTime(room)) {
+    if (screen === 'game') {
+      let room = this.state.db.rooms[roomName];
       // turn (who gets what color) is deterministic
       let selfTurn = Object.keys(room.users).sort().indexOf(userName);
       thing =
         <Game
-          map={room.map}
+          map={clj(JSON.parse(room.map))}
           phase={room.phase}
           currTurn={room.currTurn}
           selfTurn={selfTurn}
@@ -238,23 +349,36 @@ var Wrapper = React.createClass({
           />;
     } else if (screen === 'login') {
       thing =
-        <Login onSuccess={this.handleLoginSuccess} />;
+        <Login
+          loginError={loginError}
+          onLogin={this.handleLogin}
+          onRegister={this.handleRegister}
+          />;
     } else if (screen === 'rooms') {
       thing =
         <Rooms
           onRoomPicked={this.handleRoomPicked}
-          userName={userName} />;
+          onRoomCreate={this.handleRoomCreate}
+          rooms={this.state.db.rooms}
+          />;
     } else if (screen === 'room') {
       thing =
         <Room
           onChooseMap={this.handleChooseMap}
           onDecideMap={this.handleDecideMap}
-          room={room}
-          userName={userName} />;
+          room={this.state.db.rooms[roomName]}
+          userName={userName}
+          users={this.state.db.users}
+          />;
     }
 
+          // {JSON.stringify(this.state.db)}
     return (
       <div>
+        <div style={{color: 'white'}}>
+        </div>
+        <button onClick={this.resetFb}>RESET</button>
+
         {thing}
       </div>
     );

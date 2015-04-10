@@ -13,17 +13,18 @@ var Room = React.createClass({
   propTypes: {
     onChooseMap: p.func.isRequired,
     onDecideMap: p.func.isRequired,
+    userName: p.string.isRequired,
+    users: p.object.isRequired,
+
     room: p.shape({
       name: p.string.isRequired,
       users: p.object.isRequired,
       currMapIndex: p.number.isRequired,
-      map: p.object.isRequired,
     }).isRequired,
-    userName: p.string.isRequired,
   },
 
   render: function() {
-    let {onChooseMap, onDecideMap, room, userName} = this.props;
+    let {onChooseMap, onDecideMap, room, userName, users} = this.props;
 
     let s = {
       color: 'white',
@@ -33,7 +34,7 @@ var Room = React.createClass({
       <div>
         <div style={s}>{room.name}</div>
         {Object.keys(room.users).map(name => {
-          let u = room.users[name];
+          let u = users[name];
           return (
             <div style={s} key={name}>
               {name} ({u.ready ? 'decided' : 'deciding'})
@@ -44,7 +45,7 @@ var Room = React.createClass({
         <button onClick={onChooseMap.bind(null, -1)}>Prev</button>
         <button onClick={onChooseMap.bind(null, 1)}>Next</button>
         <MenuItem
-          disabled={room.users[userName] && room.users[userName].ready}
+          disabled={room.users[userName] && users[userName].ready}
           onClick={onDecideMap}>
           Choose
         </MenuItem>
