@@ -265,7 +265,7 @@ var Wrapper = React.createClass({
     this.firebaseRefs.db.set(db, () => {
       this.setState({
         chatLine: '',
-      })
+      });
     });
   },
 
@@ -318,11 +318,25 @@ var Wrapper = React.createClass({
           />;
     }
 
+    let chat = this.state.db.chat;
+    let msgs = this.state.db.chat && this.state.db.chat.split('\n');
+    if (msgs) {
+      msgs = msgs.filter(msg => {
+        if (/\s*: \\/.test(msg)) {
+          if (msg.indexOf('\\' + this.state.userName) >= 0) {
+            return true;
+          }
+          return false;
+        }
+        return true;
+      });
+      msgs = msgs.slice(-5).join('\n');
+    }
     return (
       <div>
         <textarea
           style={{WebkitUserSelect: 'inherit', width: 350, height: 60}}
-          value={this.state.db.chat && this.state.db.chat.split('\n').slice(-5).join('\n')}>
+          value={msgs}>
         </textarea>
         <form onSubmit={this.handleChatSubmit}>
           <input type="text" value={this.state.chatLine} onChange={this.handleChat} style={{width: 350}} />
