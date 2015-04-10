@@ -82,7 +82,7 @@ var Login = React.createClass({
             placeholder="Password"
             value={pass}
             onChange={this.handleChange.bind(null, 'pass')} />
-          <input type="submit" />Go!
+          <input type="submit" />
         </form>
         {maybeError}
       </div>
