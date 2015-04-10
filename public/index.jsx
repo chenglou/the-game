@@ -5,7 +5,6 @@ var Login = require('./Login');
 var Game = require('./Game');
 var Rooms = require('./Rooms');
 var Room = require('./Room');
-var request = require('superagent');
 var M = require('mori');
 var {getMapPlayerColors, getMapPlayerColorsM} = require('./src/getMapPlayerColors');
 var allMaps = require('./src/allMaps');
@@ -16,13 +15,6 @@ var Firebase = require('firebase');
 
 let clj = M.toClj;
 let js = M.toJs;
-
-function sameRoom(a, b) {
-  var {map, ...r} = a;
-  let map1 = map;
-  var {map, ...r2} = b;
-  return M.equals(clj(r), clj(r2)) && M.equals(map1, map);
-}
 
 function isGameTime(users, currMapIndex) {
   let names = Object.keys(users);
@@ -40,6 +32,7 @@ var Wrapper = React.createClass({
       screen: 'login',
       userName: null,
       roomName: null,
+      chatLine: '',
 
       loginError: null,
 
@@ -73,25 +66,6 @@ var Wrapper = React.createClass({
         });
       }
     }
-    return;
-
-    let room = this.state.room;
-    if (!room) {
-      return;
-    }
-    if (ps.room && sameRoom(ps.room, room)) {
-      return;
-    }
-    let {map, ...rest} = room;
-    let sendRoom = {
-      map: js(map),
-      ...rest,
-    };
-    request
-      .post('/syncRoom')
-      .send({roomName: room.name, room: sendRoom})
-      .set('Accept', 'application/json')
-      .end();
   },
 
   handleLogin: function(name, pass) {
@@ -213,56 +187,6 @@ var Wrapper = React.createClass({
     db.rooms[roomName].phase = newPhase || db.rooms[roomName].phase;
     db.rooms[roomName].currTurn = newCurrTurn == null ? db.rooms[roomName].currTurn : newCurrTurn;
     this.firebaseRefs.db.set(db);
-
-    return;
-
-    debugger;
-    let {room} = this.state;
-    let {map, phase, currTurn, over, users, ...rest} = room;
-
-    let newUsers = users;
-    let isOver = over;
-    if (!over && stuff.map) {
-      let origMap = allMaps[room.currMapIndex];
-      let colors = getMapPlayerColorsM(stuff.map);
-      let origColors = getMapPlayerColorsM(origMap);
-
-      if (M.count(colors) !== M.count(origColors)) {
-        isOver = true;
-
-        let colorsToUsers = M.zipmap(
-          getMapPlayerColors(allMaps[room.currMapIndex]),
-          Object.keys(room.users).sort()
-        );
-        let winners = M.map(
-          color => M.get(colorsToUsers, color),
-          M.intersection(colors, origColors)
-        );
-        let losers = M.map(
-          color => M.get(colorsToUsers, color),
-          M.difference(origColors, colors)
-        );
-        newUsers = js(clj(users));
-        M.each(winners, w => {
-          newUsers[w].totalPlayed++;
-          newUsers[w].totalWon++;
-        });
-        M.each(losers, w => {
-          newUsers[w].totalPlayed++;
-        });
-      }
-
-    }
-    this.setState({
-      room: {
-        map: stuff.map || map,
-        phase: stuff.phase || phase,
-        currTurn: stuff.currTurn == null ? currTurn : stuff.currTurn,
-        over: isOver,
-        users: newUsers,
-        ...rest,
-      },
-    });
   },
 
   handleWin: function() {
@@ -329,6 +253,28 @@ var Wrapper = React.createClass({
     });
   },
 
+  handleChatSubmit: function(e) {
+    e.preventDefault();
+
+    let db = this.state.db;
+    if (!db.chat) {
+      db.chat = '';
+    }
+    db.chat += (this.state.userName || 'anon') + ': ' + this.state.chatLine + '\n';
+    console.log(this.state.chatLine);
+    this.firebaseRefs.db.set(db, () => {
+      this.setState({
+        chatLine: '',
+      })
+    });
+  },
+
+  handleChat: function(e) {
+    this.setState({
+      chatLine: e.target.value,
+    });
+  },
+
   render: function() {
     let {screen, roomName, userName, loginError} = this.state;
 
@@ -372,11 +318,15 @@ var Wrapper = React.createClass({
           />;
     }
 
-          // {JSON.stringify(this.state.db)}
     return (
       <div>
-        <div style={{color: 'white'}}>
-        </div>
+        <textarea
+          style={{WebkitUserSelect: 'inherit', width: 350, height: 60}}
+          value={this.state.db.chat && this.state.db.chat.split('\n').slice(-5).join('\n')}>
+        </textarea>
+        <form onSubmit={this.handleChatSubmit}>
+          <input type="text" value={this.state.chatLine} onChange={this.handleChat} style={{width: 350}} />
+        </form>
         <button onClick={this.resetFb}>RESET</button>
 
         {thing}
