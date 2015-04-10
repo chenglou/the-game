@@ -2,16 +2,16 @@ var webpack = require('webpack');
 
 module.exports = {
   entry: {
-    index: './public/index.jsx',
+    index: './index.jsx',
   },
   output: {
-    path: './public/out',
+    path: './out',
     filename: 'index.js',
   },
   module: {
     loaders: [
-      {test: /\.jsx?$/, include: /public/, exclude: /out/, loader: 'babel-loader?experimental'},
-      {test: /\.(png|jpg)$/, include: /public/, exclude: /out/, loader: 'url-loader?limit=1'},
+      {test: /\.jsx?$/, exclude: /out|node_modules/, loader: 'babel-loader?experimental'},
+      {test: /\.(png|jpg)$/, exclude: /out|node_modules/, loader: 'url-loader?limit=1'},
     ]
   },
   resolve: {
