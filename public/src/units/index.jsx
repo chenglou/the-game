@@ -5,6 +5,9 @@ var UnitWrapper = require('./UnitWrapper');
 
 function makeGenericComp(name) {
   return React.createClass({
+    shouldComponentUpdate: function() {
+      return false;
+    },
     render: function() {
       return (
         <UnitWrapper unitName={name}>

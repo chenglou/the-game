@@ -4,10 +4,8 @@ var express = require('express');
 var fs = require('fs');
 var bodyParser = require('body-parser');
 var faker = require('faker');
-var M = require('mori');
 
 var map1 = require('./public/src/map/data/map1');
-// var map1 = M.toClj(require('./public/src/map/data/map1'));
 
 var app = express();
 app.use(express.static('public/'));
@@ -66,7 +64,7 @@ app.post('/register', function(req, res, next) {
     totalPlayed: 0,
     totalWon: 0,
   };
-  res.send(JSON.stringify(users[b.name]));
+  res.end();
   next();
 });
 
@@ -76,16 +74,28 @@ app.post('/rooms', function(req, res, next) {
 });
 
 app.post('/roomCreate', function(req, res, next) {
-  // var user = req.body;
-  var name = faker.company.bsAdjective() + ' ' + Math.floor(Math.random() * 99);
+  var userName = req.body.userName;
+  var roomName = faker.company.bsAdjective() + ' ' + Math.floor(Math.random() * 99);
   var newRoom = {
-    name: name,
+    name: roomName,
     map: map1,
     currMapIndex: 0,
     users: {},
+    currTurn: 0,
+    phase: 'Player',
+    over: false,
   };
-  rooms[name] = newRoom;
+  newRoom.users[userName] = users[userName];
+  rooms[roomName] = newRoom;
   res.send(newRoom);
+  next();
+});
+
+app.post('/roomJoin', function(req, res, next) {
+  var roomName = req.body.roomName;
+  var userName = req.body.userName;
+  rooms[roomName].users[userName] = users[userName];
+  res.send(rooms[roomName]);
   next();
 });
 
@@ -93,6 +103,12 @@ app.post('/syncRoom', function(req, res, next) {
   var roomName = req.body.roomName;
   var room = req.body.room;
   rooms[roomName] = room;
+  Object.keys(room.users).forEach(function(name) {
+    if (room.over) {
+      room.users[name].ready = false;
+    }
+    users[name] = room.users[name];
+  });
   res.end();
   next();
 });
@@ -101,8 +117,22 @@ app.post('/listenRoomP', function(req, res, next) {
   var roomName = req.body.roomName;
   res.send(rooms[roomName]);
   next();
-  // setTimeout(function() {
-  // }, 1000);
 });
+
+// app.post('/updateScores', function(req, res, next) {
+//   var roomName = req.body.roomName;
+//   var userName = req.body.userName;
+//   var winners = req.body.winners;
+//   var losers = req.body.losers;
+//   // winners.forEach(function(w) {
+//   //   users[w].totalPlayed++;
+//   //   users[w].totalWon++;
+//   // });
+//   // losers.forEach(function(w) {
+//   //   users[w].totalPlayed++;
+//   // });
+//   res.send(users[userName]);
+//   next();
+// });
 
 app.listen(4000, function () {console.log('App listening');});

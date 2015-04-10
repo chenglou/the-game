@@ -9,7 +9,7 @@ let p = React.PropTypes;
 var Rooms = React.createClass({
   propTypes: {
     onRoomPicked: p.func.isRequired,
-    user: p.object.isRequired,
+    userName: p.string.isRequired,
   },
 
   getInitialState: function() {
@@ -39,17 +39,29 @@ var Rooms = React.createClass({
     f();
   },
 
-  handleClick: function() {
+  handleCreateClick: function() {
+    let {userName, onRoomPicked} = this.props;
+
     request
       .post('/roomCreate')
-      .send(this.props.user)
+      .send({userName})
       .set('Accept', 'application/json')
       .end((err, res) => {
-        if (err) {
-          throw new Error(err);
-        }
         let obj = JSON.parse(res.text);
-        this.props.onRoomPicked(obj);
+        onRoomPicked(obj);
+      });
+  },
+
+  handleJoinClick: function(roomName) {
+    let {userName, onRoomPicked} = this.props;
+
+    request
+      .post('/roomJoin')
+      .send({userName, roomName})
+      .set('Accept', 'application/json')
+      .end((err, res) => {
+        let obj = JSON.parse(res.text);
+        onRoomPicked(obj);
       });
   },
 
@@ -58,14 +70,14 @@ var Rooms = React.createClass({
 
     return (
       <div>
-        <MenuItem onClick={this.handleClick}>
+        <MenuItem onClick={this.handleCreateClick}>
           Create Room
         </MenuItem>
         {Object.keys(rooms).map(name => {
           return (
             <MenuItem
               key={name}
-              onClick={this.props.onRoomPicked.bind(null, rooms[name])}>
+              onClick={this.handleJoinClick.bind(null, name)}>
               {name}
             </MenuItem>
           );

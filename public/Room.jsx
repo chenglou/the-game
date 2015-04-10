@@ -9,6 +9,7 @@ var M = require('mori');
 let maps = [
   M.toClj(require('./src/map/data/map1')),
   M.toClj(require('./src/map/data/map2')),
+  M.toClj(require('./src/map/data/map3')),
 ];
 
 let p = React.PropTypes;
@@ -23,11 +24,11 @@ var Room = React.createClass({
       currMapIndex: p.number.isRequired,
       map: p.object.isRequired,
     }).isRequired,
-    user: p.object.isRequired,
+    userName: p.string.isRequired,
   },
 
   render: function() {
-    let {onChooseMap, onDecideMap, room, user} = this.props;
+    let {onChooseMap, onDecideMap, room, userName} = this.props;
 
     let s = {
       color: 'white',
@@ -48,7 +49,7 @@ var Room = React.createClass({
         <button onClick={onChooseMap.bind(null, -1)}>Prev</button>
         <button onClick={onChooseMap.bind(null, 1)}>Next</button>
         <MenuItem
-          disabled={room.users[user.name] && room.users[user.name].ready}
+          disabled={room.users[userName] && room.users[userName].ready}
           onClick={onDecideMap}>
           Choose
         </MenuItem>

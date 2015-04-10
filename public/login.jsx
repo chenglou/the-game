@@ -41,7 +41,7 @@ var Login = React.createClass({
           });
           return;
         }
-        this.props.onSuccess(JSON.parse(res.text));
+        this.props.onSuccess(name);
       });
   },
 
