@@ -165,7 +165,7 @@ var Wrapper = React.createClass({
 
     let newUsers = users;
     let isOver = over;
-    if (!over) {
+    if (!over && stuff.map) {
       let origMap = maps[room.currMapIndex];
       let colors = getMapPlayerColorsM(stuff.map);
       let origColors = getMapPlayerColorsM(origMap);

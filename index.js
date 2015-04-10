@@ -103,13 +103,17 @@ app.post('/syncRoom', function(req, res, next) {
   var roomName = req.body.roomName;
   var room = req.body.room;
   rooms[roomName] = room;
-  Object.keys(room.users).forEach(function(name) {
-    if (room.over) {
+  var over = room.over;
+  if (over) {
+    Object.keys(room.users).forEach(function(name) {
       room.users[name].ready = false;
-    }
+    });
+  }
+  Object.keys(room.users).forEach(function(name) {
     users[name] = room.users[name];
   });
-  res.end();
+  console.log(users);
+  res.send({over: over});
   next();
 });
 
@@ -118,21 +122,5 @@ app.post('/listenRoomP', function(req, res, next) {
   res.send(rooms[roomName]);
   next();
 });
-
-// app.post('/updateScores', function(req, res, next) {
-//   var roomName = req.body.roomName;
-//   var userName = req.body.userName;
-//   var winners = req.body.winners;
-//   var losers = req.body.losers;
-//   // winners.forEach(function(w) {
-//   //   users[w].totalPlayed++;
-//   //   users[w].totalWon++;
-//   // });
-//   // losers.forEach(function(w) {
-//   //   users[w].totalPlayed++;
-//   // });
-//   res.send(users[userName]);
-//   next();
-// });
 
 app.listen(4000, function () {console.log('App listening');});

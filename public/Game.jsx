@@ -726,7 +726,6 @@ var Game = React.createClass({
     currTurn: p.number.isRequired,
     selfTurn: p.number.isRequired,
     originalMapIndex: p.number.isRequired,
-    crownWinners: p.func.isRequired,
 
     syncProps: p.func.isRequired,
   },
@@ -807,15 +806,6 @@ var Game = React.createClass({
 
     let doStep = steps => {
       if (steps.length === 0) {
-        // check winning
-        let {map, originalMapIndex} = this.props;
-        let origMap = maps[originalMapIndex];
-        let colors = getMapPlayerColors(map);
-        let origColors = getMapPlayerColors(origMap);
-        if (colors.length !== origColors.length && false) {
-          // this.props.crownWinners();
-        } else {
-        }
         this.props.syncProps({
           phase: 'Player',
         });
