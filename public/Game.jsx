@@ -27,17 +27,12 @@ var inCoordsList = require('./src/inCoordsList');
 var getMenuItems = require('./src/getMenuItems');
 var aStar = require('./src/aStar');
 var {getMapPlayerColors} = require('./src/getMapPlayerColors');
+var allMaps = require('./src/allMaps');
 
 let js = M.toJs;
 let clj = M.toClj;
 let {getIn, get, assoc, assocIn, updateIn} = M;
 let p = React.PropTypes;
-
-let maps = [
-  clj(require('./src/map/data/map1')),
-  clj(require('./src/map/data/map2')),
-  clj(require('./src/map/data/map3')),
-];
 
 function getUnitsByName(map, unitName) {
   return M.mapcat((row, i) => {
@@ -783,7 +778,7 @@ var Game = React.createClass({
 
   repeatCycle: function() {
     let {phase, currTurn, originalMapIndex} = this.props;
-    let turnColors = getMapPlayerColors(maps[originalMapIndex]);
+    let turnColors = getMapPlayerColors(allMaps[originalMapIndex]);
     // currTurn is really previous turn here
     var newRound = currTurn === turnColors.length - 1;
 
@@ -1048,7 +1043,7 @@ var Game = React.createClass({
     //   return;
     // }
 
-    let turnColors = getMapPlayerColors(maps[originalMapIndex]);
+    let turnColors = getMapPlayerColors(allMaps[originalMapIndex]);
     if (phase !== 'Player' ||
       (!pendingAction && getIn(map, [i, j, 'color']) !== turnColors[currTurn]) ||
       (currTurn !== selfTurn)) {
@@ -1246,7 +1241,7 @@ var Game = React.createClass({
       }
     }
 
-    let turnColors = getMapPlayerColors(maps[originalMapIndex]);
+    let turnColors = getMapPlayerColors(allMaps[originalMapIndex]);
     var currTurnColor = turnColors[currTurn];
 
     var clickS = {
@@ -1318,7 +1313,7 @@ var Game = React.createClass({
         </div>;
     }
 
-    let origMap = maps[originalMapIndex];
+    let origMap = allMaps[originalMapIndex];
     let colors = getMapPlayerColors(map);
     let origColors = getMapPlayerColors(origMap);
     let maybeWin;

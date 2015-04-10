@@ -4,13 +4,8 @@ let React = require('react');
 let request = require('superagent');
 let {MenuItem} = require('./src/Menu');
 let Grid = require('./src/map/Grid');
+let allMaps = require('./src/allMaps');
 var M = require('mori');
-
-let maps = [
-  M.toClj(require('./src/map/data/map1')),
-  M.toClj(require('./src/map/data/map2')),
-  M.toClj(require('./src/map/data/map3')),
-];
 
 let p = React.PropTypes;
 
@@ -57,7 +52,7 @@ var Room = React.createClass({
         <Grid
           hover={[-1, -1]}
           moveTrail={[]}
-          tileConfigs={maps[room.currMapIndex]}
+          tileConfigs={allMaps[room.currMapIndex]}
           onTileMouseDown={function() {}}
           onTileHover={function() {}}>
         </Grid>

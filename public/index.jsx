@@ -8,15 +8,10 @@ var Room = require('./Room');
 var request = require('superagent');
 var M = require('mori');
 var {getMapPlayerColors, getMapPlayerColorsM} = require('./src/getMapPlayerColors');
+var allMaps = require('./src/allMaps');
 
 let clj = M.toClj;
 let js = M.toJs;
-
-let maps = [
-  clj(require('./src/map/data/map1')),
-  clj(require('./src/map/data/map2')),
-  clj(require('./src/map/data/map3')),
-];
 
 function sameRoom(a, b) {
   var {map, ...r} = a;
@@ -28,7 +23,7 @@ function sameRoom(a, b) {
 function isGameTime({users, currMapIndex}) {
   let names = Object.keys(users);
   let allReady = names.every(name => users[name].ready);
-  let colors = getMapPlayerColors(maps[currMapIndex]);
+  let colors = getMapPlayerColors(allMaps[currMapIndex]);
 
   return allReady && colors.length === names.length;
 }
@@ -133,7 +128,7 @@ var Wrapper = React.createClass({
 
     this.setState({
       room: {
-        map: maps[newRest.currMapIndex],
+        map: allMaps[newRest.currMapIndex],
         ...newRest,
       },
     });
@@ -145,9 +140,9 @@ var Wrapper = React.createClass({
 
     let next = currMapIndex + step;
     if (next < 0) {
-      next = maps.length - 1;
+      next = allMaps.length - 1;
     }
-    if (next >= maps.length) {
+    if (next >= allMaps.length) {
       next = 0;
     }
     let newUsers = js(clj(users));
@@ -166,7 +161,7 @@ var Wrapper = React.createClass({
     let newUsers = users;
     let isOver = over;
     if (!over && stuff.map) {
-      let origMap = maps[room.currMapIndex];
+      let origMap = allMaps[room.currMapIndex];
       let colors = getMapPlayerColorsM(stuff.map);
       let origColors = getMapPlayerColorsM(origMap);
 
@@ -174,7 +169,7 @@ var Wrapper = React.createClass({
         isOver = true;
 
         let colorsToUsers = M.zipmap(
-          getMapPlayerColors(maps[room.currMapIndex]),
+          getMapPlayerColors(allMaps[room.currMapIndex]),
           Object.keys(room.users).sort()
         );
         let winners = M.map(
