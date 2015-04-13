@@ -11,7 +11,6 @@ function aStar(map, [si, sj], [ei, ej]) {
   // map is a 2D arrays of 0 to 100. 100 means obstacles.
   // start is [x, y] coordinates. Same for end
   // set up cost function
-  console.log(M.toJs(map));
   let height = M.count(map);
   let width = M.count(M.first(map));
   var cost = arr2D(() => 1, width, height);
@@ -87,7 +86,6 @@ function aStar(map, [si, sj], [ei, ej]) {
   }
   // adding start point to the front of the path
   path.unshift([si, sj]);
-  console.log(path);
   return path;
 }
 
@@ -119,8 +117,7 @@ function setupHeuristic(map, cost, start, [ei, ej]) {
   return heuristic;
 }
 
-function findPathWithNewObstacle(map, path, [oi, oj])
-{
+function aStarWithNewObstacle(map, path, [oi, oj]) {
   // obstacleIndex = -1;
   // for (int i = 0; i<path.length; i++)
   // {
@@ -133,33 +130,33 @@ function findPathWithNewObstacle(map, path, [oi, oj])
 
   var obstacleIndex = path.indexOf([oi, oj]);
 
-  if (obstacleIndex == -1 || obstacleIndex == path.length - 1 || obstacleIndex == 0)
+  if (obstacleIndex === -1 ||
+    obstacleIndex === path.length - 1 ||
+    obstacleIndex === 0) {
     return path;
+  }
 
   var newPath = [];
   var prev = obstacleIndex - 1;
   var post = obstacleIndex + 1;
 
-  while (prev > 0 && post < path.length - 1)
-  {
+  while (prev > 0 && post < path.length - 1) {
     newPath = aStar(map, path[prev], path[post]);
 
-    if (newPath.length > 0)
+    if (newPath.length > 0) {
       break;
+    }
 
     prev--;
     post++;
-
   }
 
-  if (newPath.length == 0)
-  {
+  if (newPath.length === 0) {
     return [];
   }
 
   var p = path;
-  return p.splice(prev, post-prev+1, newPath);
+  return p.splice(prev, post - prev + 1, newPath);
 }
 
-module.exports = aStar;
-
+module.exports = {aStar, aStarWithNewObstacle};

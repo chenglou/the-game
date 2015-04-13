@@ -24,7 +24,7 @@ var canMoveToAura = require('./src/canMoveToAura');
 var updateMap = require('./src/updateMap');
 var inCoordsList = require('./src/inCoordsList');
 var getMenuItems = require('./src/getMenuItems');
-var aStar = require('./src/aStar');
+var {aStar, aStarWithNewObstacle} = require('./src/aStar');
 var {getMapPlayerColors} = require('./src/getMapPlayerColors');
 var allMaps = require('./src/allMaps');
 
@@ -419,6 +419,9 @@ function findPath(map, [di, dj], [ui, uj]) {
   let coordsMap = region.reduce((coordsMap, [i, j]) => {
     // doesn't check color and all. assume pre-checked
     if (hasConflict(map, 'Villager', i, j)) {
+      return coordsMap;
+    } else if (getIn(map, [i, j, 'units', 'Meadow'])) {
+      coordsMap[i][j] = 50;
       return coordsMap;
     }
     coordsMap[i][j] = 0;
@@ -815,6 +818,24 @@ var Game = React.createClass({
         // shift
         this.setState({
           creatingUnit: true,
+        });
+      } else if (e.which === 70) {
+        // f
+        let map = this.props.map;
+        let newMap = M.map((row, i) => {
+          let newRow = M.map((cell, j) => {
+            if (hasConflict(map, 'Tree', i, j) || Math.random() > 0.15) {
+              return dissocIn(cell, ['units', 'Tree']);
+            }
+            return assocIn(cell, ['units', 'Tree'], defaultConfig.Tree);
+          }, row, M.range());
+
+          return M.into(M.vector(), newRow);
+        }, map, M.range());
+
+        newMap = M.into(M.vector(), newMap);
+        this.props.syncProps({
+          map: newMap,
         });
       }
     });
