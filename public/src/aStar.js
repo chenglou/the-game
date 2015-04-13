@@ -8,9 +8,11 @@ function aStar(map, [si, sj], [ei, ej]) {
   if (M.getIn(map, [ei, ej]) === 1) {
     return [];
   }
-  // map is a 2D arrays of 0 and 1. 1 means obstacles.
+  // map is a 2D arrays of 0 to 100. 100 means obstacles.
   // start is [x, y] coordinates. Same for end
-  var H = setupHeuristic(map, [si, sj], [ei, ej]);
+  // set up cost function
+  var cost = arr2D(() => 1, width, height);
+  var H = setupHeuristic(map, cost, [si, sj], [ei, ej]);
   var closed = M.set();
   // priority queue
   var open = M.sortedSetBy((a, b) => {
@@ -22,8 +24,6 @@ function aStar(map, [si, sj], [ei, ej]) {
   let height = M.count(map);
   let width = M.count(M.first(map));
   var parentEdges = arr2D(() => [-1, -1], width, height);
-
-  // set up cost function
   var C = arr2D(() => 9999, width, height);
 
   C[si][sj] = 0;
@@ -41,23 +41,28 @@ function aStar(map, [si, sj], [ei, ej]) {
     var curNeighbors =
       findNeighbors(map, ci, cj).filter(([i, j]) => H[i][j] !== -1);
 
+    if (H[ci][cj] == 0)
+    {
+      break;
+    }
+
     // set up cost
     curNeighbors.forEach(([i, j]) => {
       let v = M.vector(i, j);
-      var cost = C[ci][cj] + 1;
+      var tmpCost = C[ci][cj] + cost[ci][cj];
 
-      if (M.get(open, v) && cost < C[i][j]) {
+      if (M.get(open, v) && tmpCost < C[i][j]) {
         // should never happen
         open = M.disj(open, v);
       }
       if (M.get(closed, v)) {
-        if (cost < C[i][j]) {
+        if (tmpCost < C[i][j]) {
           closed = M.disj(closed, v);
         }
       }
       if (!M.get(open, v) && !M.get(closed, v)) {
-        if (cost < C[i][j]) {
-          C[i][j] = cost;
+        if (tmpCost < C[i][j]) {
+          C[i][j] = tmpCost;
           // TODO: set parent edge
           parentEdges[i][j][0] = ci;
           parentEdges[i][j][1] = cj;
@@ -84,7 +89,7 @@ function aStar(map, [si, sj], [ei, ej]) {
   return path;
 }
 
-function setupHeuristic(map, start, [ei, ej]) {
+function setupHeuristic(map, cost, start, [ei, ej]) {
   // initialize a 2D array of -1
   let height = M.count(map);
   let width = M.count(M.first(map));
@@ -99,36 +104,61 @@ function setupHeuristic(map, start, [ei, ej]) {
   while(toVisit.length > 0) {
     let [ci, cj] = toVisit.pop();
     let unvisitedNeighbors = findNeighbors(map, ci, cj)
-      .filter(([i, j]) => M.getIn(map, [i, j]) === 0)
+      .filter(([i, j]) => M.getIn(map, [i, j]) !== 100)
       .filter(([i, j]) => !M.get(visited, M.vector(i, j)));
 
     unvisitedNeighbors.forEach(([i, j]) => {
       visited = M.conj(visited, M.vector(i, j));
       heuristic[i][j] = heuristic[ci][cj] + 1;
+      cost[i][j] += M.getIn(map, [i, j])
       toVisit.push([i, j]);
     });
   }
   return heuristic;
 }
 
-// function rand() {
-//   let res = [];
-//   for (let i = 0; i < 20; i++) {
-//     res.push([]);
-//     for (let j = 0; j < 30; j++) {
-//       res[i][j] = Math.random() > .5 ? 1 : 0;
-//     }
-//   }
-//   return res;
-// }
+function findPathWithNewObstacle(map, path, [oi, oj])
+{
+  // obstacleIndex = -1;
+  // for (int i = 0; i<path.length; i++)
+  // {
+  //   if (path[i][0] == oi && path[i][1] == oj)
+  //   {
+  //     obstacleIndex = i;
+  //     break;
+  //   }
+  // }
 
-// console.log(JSON.stringify(
-//   aStar(
-//     M.toClj(
-//       [[0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 1, 1, 0, 1, 1, 0, 0], [0, 0, 1, 1, 1, 1, 1, 1, 0], [0, 0, 1, 1, 1, 1, 1, 0, 0], [0, 0, 0, 1, 1, 1, 1, 0, 0], [0, 0, 0, 1, 1, 1, 0, 0, 0], [0, 0, 0, 0, 1, 1, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0]]
-//     ), [0, 4], [9, 4]
-//   )
-// ));
+  var obstacleIndex = path.indexOf([oi, oj]);
+
+  if (obstacleIndex == -1 || obstacleIndex == path.length - 1 || obstacleIndex == 0)
+    return path;
+
+  var newPath = [];
+  var prev = obstacleIndex - 1;
+  var post = obstacleIndex + 1;
+
+  while (prev > 0 && post < path.length - 1)
+  {
+    newPath = aStar(map, path[prev], path[post]);
+
+    if (newPath.length > 0)
+      break;
+
+    prev--;
+    post++;
+
+  }
+
+  if (newPath.length == 0)
+  {
+    return [];
+  }
+
+  var p = path;
+  return p.splice(prev, post-prev+1, newPath);
+}
+
 
 module.exports = aStar;
 
