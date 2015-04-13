@@ -14,6 +14,10 @@ var Wrapper = React.createClass({
     };
   },
 
+  handleSyncProps: function(stuff) {
+    this.setState(stuff);
+  },
+
   render: function() {
     let {map, phase, currTurn, selfTurn, currMapIndex} = this.state;
 
@@ -24,7 +28,7 @@ var Wrapper = React.createClass({
           phase={phase}
           currTurn={currTurn}
           selfTurn={0}
-          syncProps={this.setState}
+          syncProps={this.handleSyncProps}
           originalMapIndex={currMapIndex}
           onWin={function() {}}
           />
