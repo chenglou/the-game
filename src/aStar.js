@@ -159,6 +159,5 @@ function findPathWithNewObstacle(map, path, [oi, oj])
   return p.splice(prev, post-prev+1, newPath);
 }
 
-
 module.exports = aStar;
 

@@ -29,7 +29,6 @@ let canAttack = {
     'Soldier',
   ],
   Cannon: ['Hovel', 'Town', 'Watchtower', 'Peasant', 'Infantry', 'Castle'],
-  // Watchtower: [],
 };
 
 for (let key in canAttack) {

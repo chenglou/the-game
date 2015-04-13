@@ -1,3 +1,5 @@
+'use strict';
+
 var M = require('mori');
 
 function dissocIn(coll, path) {

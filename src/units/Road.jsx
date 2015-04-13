@@ -1,8 +1,10 @@
+'use strict';
+
 var React = require('react');
 var UnitWrapper = require('./UnitWrapper');
 var Badge = require('../map/Badge');
 
-var Meadow = React.createClass({
+var Road = React.createClass({
   render: function() {
     var {cooldown} = this.props;
 
@@ -12,11 +14,11 @@ var Meadow = React.createClass({
     }
 
     return (
-      <UnitWrapper unitName="Meadow">
+      <UnitWrapper unitName="Road">
         {maybeBadge}
       </UnitWrapper>
     );
   }
 });
 
-module.exports = Meadow;
+module.exports = Road;

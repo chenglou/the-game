@@ -90,6 +90,11 @@ function killTombstones(map, turn) {
 }
 
 function resetUnitMoves(map, turn) {
+  map = updateMap(
+    map,
+    getUnitsByColorAndName(map, turn, 'Cannon'),
+    cell => assocIn(cell, ['units', 'Cannon', 'hasMoved'], false)
+  );
   return updateMap(
     map,
     getUnitsByColorAndName(map, turn, 'Villager'),
@@ -726,27 +731,10 @@ var Game = React.createClass({
   },
 
   getInitialState: function() {
-    // var map = M.vector(M.vector());
-    // var fireBaseBaseUrl = 'https://blistering-heat-9706.firebaseio.com';
-
     return {
-      // to sync. the real initialization is in didMount
-      // map: map,
-      // currTurn: 0,
-      // phase: '',
-
-      fbState: function() {},
-      fbEmptySlots: function() {},
-      // fbState: new Firebase(fireBaseBaseUrl + 'state'),
-      // fbEmptySlots: new Firebase(fireBaseBaseUrl + 'emptySlots'),
-
-      // who am I. modified once by fireBase
-      // selfTurn: -1,
-
       history: [this.props.map],
       historyIndex: 0,
       hover: [0, 0],
-      // turns: ['Red', 'Blue', 'Orange'],
       selectedCoords: null,
       pendingAction: null,
       showMenu: false,
@@ -758,21 +746,8 @@ var Game = React.createClass({
       creatingUnit: false,
       consoleSelectedUnit: 'Grass',
       consoleSelectedColor: 'Gray',
-      // useFirebase: true,
       useFirebase: false,
     };
-  },
-
-  setFb: function() {
-    // var {useFirebase, fbState, currTurn, map, phase} = this.state;
-
-    // if (useFirebase) {
-    //   fbState.set({
-    //     map: JSON.stringify(js(map)),
-    //     currTurn: currTurn,
-    //     phase: phase,
-    //   });
-    // }
   },
 
   repeatCycle: function() {
@@ -785,9 +760,6 @@ var Game = React.createClass({
       this.props.syncProps({
         currTurn: newRound ? 0 : currTurn + 1,
       });
-      // this.setState({
-      //   currTurn: newRound ? 0 : currTurn + 1,
-      // }, this.setFb);
     }
 
     var steps = [
@@ -804,9 +776,6 @@ var Game = React.createClass({
         this.props.syncProps({
           phase: 'Player',
         });
-        // this.setState({
-        //   phase: 'Player',
-        // }, this.setFb);
         return;
       }
 
@@ -817,11 +786,8 @@ var Game = React.createClass({
 
         var newMap = action(map, turnColors[currTurn]);
         this.setState({
-          // map: newMap,
-          // phase: nextPhase,
           history: history.concat([newMap]),
         }, () => {
-          // this.setFb();
           this.props.syncProps({
             map: newMap,
             phase: nextPhase,
@@ -835,12 +801,6 @@ var Game = React.createClass({
   },
 
   componentDidMount: function() {
-    // var {
-    //   useFirebase,
-    //   fbState,
-    //   fbEmptySlots,
-    // } = this.state;
-
     window.addEventListener('keydown', (e) => {
       if (!this.isMounted()) {
         return;
@@ -878,77 +838,7 @@ var Game = React.createClass({
         mouseDown: false,
       });
     });
-
-    // if (!useFirebase) {
-    //   this.setState(veryFirstState);
-    //   return;
-    // }
-
-    // fbEmptySlots.once('value', (dataSnapshot) => {
-    //   var emptySlots = dataSnapshot.val();
-    //   if (emptySlots <= 0 || emptySlots === 2) {
-    //     // either way, new game
-    //     fbEmptySlots.set(1);
-    //     this.setState({
-    //       selfTurn: 1,
-    //     });
-    //   } else {
-    //     fbEmptySlots.set(emptySlots - 1);
-    //     this.setState({
-    //       selfTurn: emptySlots - 1,
-    //     });
-    //   }
-
-    //   fbState.once('value', (dataSnapshot) => {
-    //     var {map, currTurn, phase} = dataSnapshot.val();
-    //     var JSMap = JSON.parse(map);
-
-    //     if (JSMap == null || currTurn == null || phase == null || phase === '') {
-    //       // first time, send back some legit value and start
-    //       this.setState(veryFirstState, this.setFb);
-    //       fbEmptySlots.set(2);
-    //       return;
-    //     }
-
-    //     // existing data
-    //     var newMap = clj(JSMap);
-    //     this.setState({
-    //       history: [newMap],
-    //       map: newMap,
-    //       currTurn: currTurn,
-    //       phase: phase,
-    //     });
-    //   });
-
-    //   fbState.on('value', (dataSnapshot) => {
-    //     var s = this.state;
-    //     var {map, currTurn, phase} = dataSnapshot.val();
-    //     var newMap = clj(JSON.parse(map));
-
-    //     // careful about infinite recursive calls
-    //     if (M.equals(s.map, newMap) &&
-    //       s.currTurn === currTurn &&
-    //       s.phase === phase) {
-    //       return;
-    //     }
-
-    //     this.setState({
-    //       map: newMap,
-    //       currTurn: currTurn,
-    //       phase: phase,
-    //       history: s.history.concat([newMap]),
-    //     });
-    //   });
-    // });
   },
-
-  // for testing purposes, reset firebase map data
-  // handleResetGame: function() {
-  //   this.setState({
-  //     ...veryFirstState,
-  //     selfTurn: this.state.selfTurn,
-  //   }, this.setFb);
-  // },
 
   handleCheatClick: function() {
     this.setState({
@@ -961,7 +851,6 @@ var Game = React.createClass({
     // TODO: better history navigation
     this.setState({
       historyIndex: value,
-      // map: this.state.history[value],
     });
   },
 
@@ -997,22 +886,13 @@ var Game = React.createClass({
         map: newMap,
       });
     });
-    // this.setState({
-    //   ...cancelPendingActionState,
-    //   map: newMap,
-    // }, this.setFb);
   },
 
   handleTileMouseDown: function(i, j) {
     let {
-      // map,
       pendingAction,
       selectedCoords,
-      // phase,
-      // currTurn,
-      // turns,
       history,
-      // selfTurn,
       creatingUnit,
       consoleSelectedColor,
       consoleSelectedUnit,
@@ -1028,19 +908,8 @@ var Game = React.createClass({
           map: forceAddNewUnit(map, i, j, consoleSelectedColor, consoleSelectedUnit),
         });
       });
-      // this.setState({
-      //   ...cancelPendingActionState,
-      //   mouseDown: true,
-      //   map: forceAddNewUnit(map, i, j, consoleSelectedColor, consoleSelectedUnit),
-      // });
       return;
     }
-
-    // TODO: test. remove this and uncomment next code block
-    // if (phase !== 'Player') {
-    //   this.setState(cancelPendingActionState);
-    //   return;
-    // }
 
     let turnColors = getMapPlayerColors(allMaps[originalMapIndex]);
     if (phase !== 'Player' ||
@@ -1083,11 +952,6 @@ var Game = React.createClass({
         map: newMap,
       });
     });
-    // this.setState({
-    //   ...cancelPendingActionState,
-    //   map: newMap,
-    //   history: history.concat([newMap]),
-    // }, this.setFb);
   },
 
   handleTileHover: function(i, j) {
@@ -1109,21 +973,12 @@ var Game = React.createClass({
         hover: [i, j],
       });
     }
-    // this.setState({
-    //   hover: [i, j],
-    //   map: creatingUnit && mouseDown
-    //     ? forceAddNewUnit(map, i, j, consoleSelectedColor, consoleSelectedUnit)
-    //     : map,
-    // });
   },
 
   handleConsoleTextAreaChange: function(e) {
     this.props.syncProps({
       map: clj(JSON.parse(e.target.value)),
     });
-    // this.setState({
-    //   map: clj(JSON.parse(e.target.value)),
-    // });
   },
 
   handleConsoleColorClick: function(color) {
@@ -1165,25 +1020,16 @@ var Game = React.createClass({
     this.props.syncProps({
       map: surroundWithSea(map),
     });
-    // this.setState({
-    //   map: surroundWithSea(map),
-    // });
   },
 
   render: function() {
     var {
       hover,
       selectedCoords,
-      // map,
-      // phase,
       pendingAction,
       showMenu,
-      // turns,
-      // currTurn,
       history,
       historyIndex,
-      // selfTurn,
-
       cheatMode,
       consoleSelectedUnit,
       consoleSelectedColor,

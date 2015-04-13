@@ -5,7 +5,6 @@ var request = require('superagent');
 
 var reactFire = require('reactfire');
 var Firebase = require('firebase');
-
 let p = React.PropTypes;
 
 var Login = React.createClass({
