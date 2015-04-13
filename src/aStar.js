@@ -11,6 +11,9 @@ function aStar(map, [si, sj], [ei, ej]) {
   // map is a 2D arrays of 0 to 100. 100 means obstacles.
   // start is [x, y] coordinates. Same for end
   // set up cost function
+  console.log(M.toJs(map));
+  let height = M.count(map);
+  let width = M.count(M.first(map));
   var cost = arr2D(() => 1, width, height);
   var H = setupHeuristic(map, cost, [si, sj], [ei, ej]);
   var closed = M.set();
@@ -21,8 +24,6 @@ function aStar(map, [si, sj], [ei, ej]) {
     return (H[ai][aj] + C[ai][aj]) - (H[bi][bj] + C[bi][bj]);
   }, M.vector(si, sj));
 
-  let height = M.count(map);
-  let width = M.count(M.first(map));
   var parentEdges = arr2D(() => [-1, -1], width, height);
   var C = arr2D(() => 9999, width, height);
 
@@ -86,6 +87,7 @@ function aStar(map, [si, sj], [ei, ej]) {
   }
   // adding start point to the front of the path
   path.unshift([si, sj]);
+  console.log(path);
   return path;
 }
 

@@ -423,7 +423,7 @@ function findPath(map, [di, dj], [ui, uj]) {
     }
     coordsMap[i][j] = 0;
     return coordsMap;
-  }, arr2D(() => 1, width, height));
+  }, arr2D(() => 100, width, height));
 
   return aStar(clj(coordsMap), [ui, uj], [di, dj]);
 }
