@@ -34,7 +34,6 @@ function aStar(map, [si, sj], [ei, ej]) {
     }
   }
   
-  debugger;
   prevRun.s = [si, sj];
   prevRun.e = [ei, ej];
   prevRun.path = aStarDiffPath(map, cost, H, [si, sj], [ei, ej]);
@@ -146,6 +145,7 @@ function aStarDiffPath(map, cost, H, [si, sj], [ei, ej])
   }
   // adding start point to the front of the path
   path.unshift([si, sj]);
+
   return path;
 }
 
@@ -173,20 +173,28 @@ function aStarWithNewObstacle(map, cost, H)
   {
     var newPath = [];
     let [oi, oj] = obstacleIndexes[i].coord;
-    var index = path.indexOf([oi, oj]);
+    var index = -1;
+    for (var i = 0; i<path.length; i++)
+    {
+      if (path[i][0] === oi && path[i][1] === oj)
+      {
+        index = i;
+        break;
+      }
+    }
     if (index < 1 || index >= path.length - 1)
     {
       prevRun.path = [];
       return prevRun.path;
     }
-
     var prev = index - 1;
     var post = index + 1;
 
-    while (prev > 0 && post < path.length - 1) 
+    while (prev >= 0 && post < path.length) 
     {
-      newPath = aStarDiffPath(cost, H);
-
+      console.log(prev);
+      newPath = aStarDiffPath(map, cost, H, path[prev], path[post]);
+      console.log(newPath);
       if (newPath.length > 0) {
         break;
       }
@@ -195,12 +203,16 @@ function aStarWithNewObstacle(map, cost, H)
       post++;
     }
 
+    
     if (newPath.length === 0) {
       return [];
     }
-
-    path.splice(prev, post - prev + 1, newPath);
+    path = path.slice(0, prev).concat(newPath).concat(path.slice(post + 1));
   }
+  return path;
 }
+
+console.log(aStar(M.toClj([[0, 100, 0, 0],[0, 0, 0, 0],[0, 100, 0, 0]]), [0, 0], [2, 3]));
+console.log(aStar(M.toClj([[0, 100, 0, 0],[0, 0, 0, 0],[0, 100, 100, 0]]), [0, 0], [2, 3]));
 
 module.exports = aStar;

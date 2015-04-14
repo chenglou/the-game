@@ -428,7 +428,6 @@ function findPath(map, [di, dj], [ui, uj]) {
     return coordsMap;
   }, arr2D(() => 100, width, height));
 
-  debugger;
   return aStar(clj(coordsMap), [ui, uj], [di, dj]);
 }
 
