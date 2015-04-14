@@ -24,7 +24,7 @@ var canMoveToAura = require('./src/canMoveToAura');
 var updateMap = require('./src/updateMap');
 var inCoordsList = require('./src/inCoordsList');
 var getMenuItems = require('./src/getMenuItems');
-var {aStar, aStarWithNewObstacle} = require('./src/aStar');
+var aStar = require('./src/aStar');
 var {getMapPlayerColors} = require('./src/getMapPlayerColors');
 var allMaps = require('./src/allMaps');
 
@@ -428,6 +428,7 @@ function findPath(map, [di, dj], [ui, uj]) {
     return coordsMap;
   }, arr2D(() => 100, width, height));
 
+  debugger;
   return aStar(clj(coordsMap), [ui, uj], [di, dj]);
 }
 

@@ -4,8 +4,14 @@ var M = require('mori');
 var findNeighbors = require('./findNeighbors');
 var arr2D = require('./utils/arr2D');
 
+var prevRun = {
+  s: [],
+  e: [],
+  path: [],
+};
+
 function aStar(map, [si, sj], [ei, ej]) {
-  if (M.getIn(map, [ei, ej]) === 1) {
+  if (M.getIn(map, [ei, ej]) === 100) {
     return [];
   }
   // map is a 2D arrays of 0 to 100. 100 means obstacles.
@@ -15,6 +21,60 @@ function aStar(map, [si, sj], [ei, ej]) {
   let width = M.count(M.first(map));
   var cost = arr2D(() => 1, width, height);
   var H = setupHeuristic(map, cost, [si, sj], [ei, ej]);
+  
+  if (prevRun)
+  {
+    if (prevRun.s.length!==0 && prevRun.e.length!==0 && prevRun.path.length!==0)
+    {
+      if (prevRun.s[0] === si && prevRun.s[1] === sj && prevRun.e[0] === ei && prevRun.e[1] === ej )
+      {
+        prevRun.path = aStarWithNewObstacle(map, cost, H);
+        return prevRun.path;
+      }
+    }
+  }
+  
+  debugger;
+  prevRun.s = [si, sj];
+  prevRun.e = [ei, ej];
+  prevRun.path = aStarDiffPath(map, cost, H, [si, sj], [ei, ej]);
+  return prevRun.path;
+}
+
+function setupHeuristic(map, cost, start, [ei, ej]) 
+{
+  // initialize a 2D array of -1
+  let height = M.count(map);
+  let width = M.count(M.first(map));
+  let heuristic = arr2D(() => -1, width, height);
+  heuristic[ei][ej] = 0;
+
+  let visited = M.set();
+  let toVisit = [[ei, ej]];
+  visited = M.conj(visited, M.vector(ei, ej));
+
+  // start with end point, and slowly expand regions
+  while(toVisit.length > 0) {
+    let [ci, cj] = toVisit.pop();
+    let unvisitedNeighbors = findNeighbors(map, ci, cj)
+      .filter(([i, j]) => M.getIn(map, [i, j]) !== 100)
+      .filter(([i, j]) => !M.get(visited, M.vector(i, j)));
+
+    unvisitedNeighbors.forEach(([i, j]) => {
+      visited = M.conj(visited, M.vector(i, j));
+      heuristic[i][j] = heuristic[ci][cj] + 1;
+      cost[i][j] += M.getIn(map, [i, j])
+      toVisit.push([i, j]);
+    });
+  }
+  return heuristic;
+}
+
+function aStarDiffPath(map, cost, H, [si, sj], [ei, ej])
+{
+  let height = M.count(map);
+  let width = M.count(M.first(map));
+
   var closed = M.set();
   // priority queue
   var open = M.sortedSetBy((a, b) => {
@@ -89,74 +149,58 @@ function aStar(map, [si, sj], [ei, ej]) {
   return path;
 }
 
-function setupHeuristic(map, cost, start, [ei, ej]) {
-  // initialize a 2D array of -1
-  let height = M.count(map);
-  let width = M.count(M.first(map));
-  let heuristic = arr2D(() => -1, width, height);
-  heuristic[ei][ej] = 0;
-
-  let visited = M.set();
-  let toVisit = [[ei, ej]];
-  visited = M.conj(visited, M.vector(ei, ej));
-
-  // start with end point, and slowly expand regions
-  while(toVisit.length > 0) {
-    let [ci, cj] = toVisit.pop();
-    let unvisitedNeighbors = findNeighbors(map, ci, cj)
-      .filter(([i, j]) => M.getIn(map, [i, j]) !== 100)
-      .filter(([i, j]) => !M.get(visited, M.vector(i, j)));
-
-    unvisitedNeighbors.forEach(([i, j]) => {
-      visited = M.conj(visited, M.vector(i, j));
-      heuristic[i][j] = heuristic[ci][cj] + 1;
-      cost[i][j] += M.getIn(map, [i, j])
-      toVisit.push([i, j]);
-    });
+function aStarWithNewObstacle(map, cost, H) 
+{
+  var obstacleIndexes = [];
+  for (var i = 1; i<prevRun.path.length; i++)
+  {
+    let [pi, pj] = prevRun.path[i];
+    if (M.getIn(map, [pi, pj]) === 100)
+    {
+      obstacleIndexes.push({
+        index: i,
+        coord: [pi, pj] 
+      });
+    }
   }
-  return heuristic;
-}
 
-function aStarWithNewObstacle(map, path, [oi, oj]) {
-  // obstacleIndex = -1;
-  // for (int i = 0; i<path.length; i++)
-  // {
-  //   if (path[i][0] == oi && path[i][1] == oj)
-  //   {
-  //     obstacleIndex = i;
-  //     break;
-  //   }
-  // }
-
-  var obstacleIndex = path.indexOf([oi, oj]);
-
-  if (obstacleIndex === -1 ||
-    obstacleIndex === path.length - 1 ||
-    obstacleIndex === 0) {
+  if (obstacleIndexes.length === 0) {
     return path;
   }
 
-  var newPath = [];
-  var prev = obstacleIndex - 1;
-  var post = obstacleIndex + 1;
-
-  while (prev > 0 && post < path.length - 1) {
-    newPath = aStar(map, path[prev], path[post]);
-
-    if (newPath.length > 0) {
-      break;
+  var path = prevRun.path;
+  for (var i = 0; i<obstacleIndexes.length; i++)
+  {
+    var newPath = [];
+    let [oi, oj] = obstacleIndexes[i].coord;
+    var index = path.indexOf([oi, oj]);
+    if (index < 1 || index >= path.length - 1)
+    {
+      prevRun.path = [];
+      return prevRun.path;
     }
 
-    prev--;
-    post++;
-  }
+    var prev = index - 1;
+    var post = index + 1;
 
-  if (newPath.length === 0) {
-    return [];
-  }
+    while (prev > 0 && post < path.length - 1) 
+    {
+      newPath = aStarDiffPath(cost, H);
 
-  var p = path;
-  return p.splice(prev, post - prev + 1, newPath);
+      if (newPath.length > 0) {
+        break;
+      }
+
+      prev--;
+      post++;
+    }
+
+    if (newPath.length === 0) {
+      return [];
+    }
+
+    path.splice(prev, post - prev + 1, newPath);
+  }
 }
 
-module.exports = {aStar, aStarWithNewObstacle};
+module.exports = aStar;
