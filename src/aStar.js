@@ -4,16 +4,22 @@ var M = require('mori');
 var findNeighbors = require('./findNeighbors');
 var arr2D = require('./utils/arr2D');
 
+var hasPrevRun = false;
 var prevRun = {
   s: [],
   e: [],
   path: [],
+  map: null,
 };
 
 function aStar(map, [si, sj], [ei, ej]) {
   if (M.getIn(map, [ei, ej]) === 100) {
     return [];
   }
+  // if (M.equals(map, prevRun.map)) {
+  //   return prevRun.path;
+  // }
+
   // map is a 2D arrays of 0 to 100. 100 means obstacles.
   // start is [x, y] coordinates. Same for end
   // set up cost function
@@ -22,13 +28,17 @@ function aStar(map, [si, sj], [ei, ej]) {
   var cost = arr2D(() => 1, width, height);
   var H = setupHeuristic(map, cost, [si, sj], [ei, ej]);
 
-  if (prevRun.s.length!==0 && prevRun.e.length!==0 && prevRun.path.length!==0) {
-    if (prevRun.s[0] === si && prevRun.s[1] === sj && prevRun.e[0] === ei && prevRun.e[1] === ej ) {
+  prevRun.map = map;
+
+  if (hasPrevRun) {
+    let {s: [psi, psj], e: [pei, pej], map} = prevRun;
+    if (psi === si && psj === sj && pei === ei && pej === ej) {
       prevRun.path = aStarWithNewObstacle(map, cost, H);
       return prevRun.path;
     }
   }
 
+  hasPrevRun = true;
   prevRun.s = [si, sj];
   prevRun.e = [ei, ej];
   prevRun.path = aStarDiffPath(map, cost, H, [si, sj], [ei, ej]);
